@@ -1,50 +1,47 @@
-const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Optional: use your own peer
-const db = gun.get('macx_users');
-const accountList = document.getElementById('accountList');
-const searchUser = document.getElementById('searchUser');
+// Use a public or your own Gun relay server to ensure cross-device sync
+const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Replace with your own server for full control
+const users = gun.get('macx_users');
 
+const accountList = document.getElementById('accountList');
+const searchInput = document.getElementById('searchUser');
+
+// Render all accounts including deleted (marked)
 function renderAccounts(filter = '') {
   accountList.innerHTML = '';
-  db.map().once((data, key) => {
-    if (!data || !data.username) return;
+  users.map().once((data, key) => {
+    if (!data || !data.username || !data.email || !data.password) return;
 
-    if (!data.deleted && data.username.toLowerCase().includes(filter.toLowerCase())) {
-      const div = document.createElement('div');
-      div.className = 'account';
-      div.innerHTML = `
-        <strong>Username:</strong> ${data.username}<br>
-        <strong>Email:</strong> ${data.email}<br>
-        <strong>Password:</strong> ${data.password}<br>
-        <button onclick="confirmDelete('${key}')">Delete</button>
-      `;
-      accountList.appendChild(div);
-    } else if (data.deleted && data.username.toLowerCase().includes(filter.toLowerCase())) {
-      const div = document.createElement('div');
-      div.className = 'account deleted';
-      div.innerHTML = `
-        <strong>Deleted Username:</strong> ${data.username}<br>
-        <strong>Email:</strong> ${data.email}<br>
-        <strong>Password:</strong> ${data.password}<br>
-        <em>(Deleted)</em>
-      `;
-      accountList.appendChild(div);
-    }
+    const username = data.username.toLowerCase();
+    const matchesSearch = username.includes(filter.toLowerCase());
+
+    if (!matchesSearch) return;
+
+    const div = document.createElement('div');
+    div.className = data.deleted ? 'account deleted' : 'account';
+    div.innerHTML = `
+      <strong>Username:</strong> ${data.username}<br>
+      <strong>Email:</strong> ${data.email}<br>
+      <strong>Password:</strong> ${data.password}<br>
+      ${data.deleted ? '<em>(Deleted)</em>' : `<button onclick="confirmDelete('${key}')">Delete</button>`}
+    `;
+    accountList.appendChild(div);
   });
 }
 
+// Confirm delete in 3 steps and store globally
 function confirmDelete(key) {
-  let confirm1 = confirm("Are you sure you want to delete this account?");
-  if (!confirm1) return;
-  let confirm2 = confirm("This action is global. Confirm again to continue.");
-  if (!confirm2) return;
-  let confirm3 = confirm("Final confirmation. This will be stored globally.");
-  if (!confirm3) return;
+  if (!confirm("Are you sure you want to delete this account?")) return;
+  if (!confirm("This action is permanent across all devices. Proceed?")) return;
+  if (!confirm("Final confirmation. DELETE account?")) return;
 
-  db.get(key).put({ deleted: true });
-  renderAccounts(searchUser.value);
+  users.get(key).put({ deleted: true });
+  renderAccounts(searchInput.value);
 }
 
-searchUser.addEventListener('input', () => renderAccounts(searchUser.value));
+// Search input listener
+searchInput.addEventListener('input', () => {
+  renderAccounts(searchInput.value);
+});
 
 // Initial render
 renderAccounts();
