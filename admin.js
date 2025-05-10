@@ -1,82 +1,80 @@
-// Connect to the global GUN relay for storage
+// Connect to GUN using the Manhattan relay
 const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
 const users = gun.get('macx_users');
 
-// DOM elements for the admin panel
+// DOM elements
 const accountList = document.getElementById('accountList');
 const searchInput = document.getElementById('searchInput');
 const deleteModal = document.getElementById('deleteModal');
 const deleteConfirm = document.getElementById('deleteConfirm');
 const deleteCancel = document.getElementById('deleteCancel');
 
-// Utility: Show message in the UI
-function showMessage(message, success = false) {
-  const msg = document.createElement('p');
-  msg.textContent = message;
-  msg.style.color = success ? 'green' : 'red';
-  msg.style.marginTop = '0.5rem';
+let accountToDelete = null;
+
+// Function: Show message
+function showMessage(text, isSuccess = true) {
+  const msg = document.createElement('div');
+  msg.textContent = text;
+  msg.style.color = isSuccess ? 'green' : 'red';
   document.body.appendChild(msg);
-  setTimeout(() => msg.remove(), 4000);
+  setTimeout(() => msg.remove(), 3000);
 }
 
-// Render the accounts list from GUN
+// Function: Render accounts from GUN
 function renderAccounts() {
-  accountList.innerHTML = ''; // Clear current list
-  users.map().once((userData, username) => {
-    if (userData) {
-      const accountItem = document.createElement('div');
-      accountItem.className = 'account-item';
-      accountItem.dataset.username = username; // Store username as a data attribute
-      accountItem.innerHTML = `
-        <p>Username: ${username}</p>
-        <p>Email: ${userData.email}</p>
-        <button onclick="openDeleteModal('${username}')">Delete</button>
+  accountList.innerHTML = '';
+  users.map().once((data, key) => {
+    if (data && data.username && data.email) {
+      const item = document.createElement('div');
+      item.className = 'account-item';
+      item.innerHTML = `
+        <strong>${data.username}</strong> (${data.email})
+        <button onclick="openDeleteModal('${key}')">Delete</button>
       `;
-      accountList.appendChild(accountItem);
+      accountList.appendChild(item);
     }
   });
 }
 
-// Search functionality
-searchInput.addEventListener('input', () => {
-  const searchTerm = searchInput.value.toLowerCase();
-  const accountItems = document.querySelectorAll('.account-item');
-  accountItems.forEach(item => {
-    const accountText = item.textContent.toLowerCase();
-    if (accountText.includes(searchTerm)) {
-      item.style.display = 'block';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-});
-
-// Open delete confirmation modal
+// Function: Open delete confirmation modal
 function openDeleteModal(username) {
-  deleteModal.style.display = 'block';
-  deleteConfirm.onclick = () => deleteAccount(username);
-  deleteCancel.onclick = () => {
-    deleteModal.style.display = 'none'; // Close the modal without deleting
-  };
+  accountToDelete = username;
+  deleteModal.style.display = 'flex';
 }
 
-// Delete account permanently from all devices
-function deleteAccount(username) {
-  users.get(username).put(null, (ack) => {
+// Function: Permanently delete the account
+function deleteAccountGlobally() {
+  if (!accountToDelete) return;
+
+  users.get(accountToDelete).put(null, ack => {
     if (ack.err) {
-      showMessage('Error deleting account. Please try again.', false);
-      return;
+      showMessage('Failed to delete account.', false);
+    } else {
+      showMessage('Account deleted permanently.', true);
+      renderAccounts();
     }
-    showMessage('Account deleted successfully!', true);
-    renderAccounts(); // Re-render the accounts list
-    deleteModal.style.display = 'none'; // Close the modal
+    deleteModal.style.display = 'none';
+    accountToDelete = null;
   });
 }
 
-// Listen for real-time updates across all devices and render accounts
-users.map().on((data, username) => {
-  renderAccounts(); // Re-render the accounts list when there are any changes
+// Event listeners
+deleteConfirm.addEventListener('click', deleteAccountGlobally);
+deleteCancel.addEventListener('click', () => {
+  deleteModal.style.display = 'none';
+  accountToDelete = null;
 });
 
-// Initial render of accounts when the page loads
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.toLowerCase();
+  const items = document.querySelectorAll('.account-item');
+  items.forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(query) ? 'block' : 'none';
+  });
+});
+
+// Listen for real-time changes
+users.map().on(() => renderAccounts());
+
+// Initial fetch
 renderAccounts();
