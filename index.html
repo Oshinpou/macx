@@ -1,0 +1,42 @@
+<!-- File: index.html --><!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MACX Cosmetics - Auth</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/pouchdb@7.2.2/dist/pouchdb.min.js"></script>
+  <script defer src="auth.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">Welcome to MACX Cosmetics</h1><!-- Login Form -->
+<form id="loginForm" class="auth-form">
+  <h2>Login</h2>
+  <input type="text" placeholder="Username" id="loginUsername" required>
+  <input type="password" placeholder="Password" id="loginPassword" required>
+  <button type="submit">Login</button>
+</form>
+
+<!-- Signup Form -->
+<form id="signupForm" class="auth-form">
+  <h2>Sign Up</h2>
+  <input type="text" placeholder="Username" id="signupUsername" required>
+  <input type="email" placeholder="Email" id="signupEmail" required>
+  <input type="password" placeholder="Password" id="signupPassword" required>
+  <button type="submit">Sign Up</button>
+</form>
+
+<!-- Recover Password Form -->
+<form id="recoverForm" class="auth-form">
+  <h2>Recover Password</h2>
+  <input type="text" placeholder="Username" id="recoverUsername" required>
+  <input type="email" placeholder="Email" id="recoverEmail" required>
+  <button type="submit">Recover</button>
+</form>
+
+<p class="admin-link">Admin? <a href="admin-login.html">Login here</a></p>
+
+  </div>
+</body>
+</html>
