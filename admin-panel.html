@@ -1,0 +1,23 @@
+<!-- File: admin-panel.html --><!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MACX Admin Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/pouchdb@7.2.2/dist/pouchdb.min.js"></script>
+  <script defer src="admin.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">MACX Admin Panel</h1>
+    <p class="logged-in">Logged in as: <span id="adminUser"></span></p><input type="text" id="searchInput" placeholder="Search user by username...">
+<button onclick="searchUser()">Search</button>
+
+<div id="userResults"></div>
+
+<p><a href="admin-login.html">Logout</a></p>
+
+  </div>
+</body>
+</html>
