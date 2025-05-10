@@ -1,11 +1,11 @@
-// Use a public Gun relay or your own deployed peer
-const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Replace with your relay
+// Connect to the same shared GUN relay used in auth.js
+const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']);
 const users = gun.get('macx_users');
 
 const accountList = document.getElementById('accountList');
 const searchInput = document.getElementById('searchUser');
 
-// Render accounts with optional filter
+// Render users globally with optional filter
 function renderAccounts(filter = '') {
   accountList.innerHTML = '';
   users.map().once((data, key) => {
@@ -24,24 +24,26 @@ function renderAccounts(filter = '') {
   });
 }
 
-// Permanently delete user from GUN
+// Delete the account globally from GUN
 function confirmDelete(key) {
-  if (!confirm("Are you sure you want to delete this account globally?")) return;
-  if (!confirm("This will remove the account from all devices permanently.")) return;
-  if (!confirm("Final confirmation: Delete permanently?")) return;
-
-  users.get(key).put(null); // Completely delete from GUN
+  if (
+    confirm("Are you sure you want to delete this account globally?") &&
+    confirm("This action will permanently remove the account from all devices.") &&
+    confirm("Final confirmation: Delete account now?")
+  ) {
+    users.get(key).put(null); // Truly deletes the data
+  }
 }
 
-// Search bar
-searchInput.addEventListener('input', () => {
-  renderAccounts(searchInput.value);
-});
-
-// Real-time updates from GUN
+// Real-time listening
 users.map().on(() => {
   renderAccounts(searchInput.value);
 });
 
-// Initial load
+// Search functionality
+searchInput.addEventListener('input', () => {
+  renderAccounts(searchInput.value);
+});
+
+// Initial render
 renderAccounts();
