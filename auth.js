@@ -1,45 +1,120 @@
-// File: auth.js const gun = Gun(); const db = new PouchDB('macx_users');
+// auth.js
 
-const loginForm = document.getElementById('loginForm'); const signupForm = document.getElementById('signupForm'); const recoverForm = document.getElementById('recoverForm'); const messageDiv = document.getElementById('message'); const recoveredPassword = document.getElementById('recoveredPassword');
+const db = new PouchDB('macx_users');
+const gun = Gun();
 
-function showMessage(text, isError = false) { messageDiv.textContent = text; messageDiv.style.color = isError ? 'red' : 'green'; }
+document.addEventListener('DOMContentLoaded', () => {
+  const signupForm = document.getElementById('signupForm');
+  const loginForm = document.getElementById('loginForm');
+  const recoverForm = document.getElementById('recoverForm');
 
-function switchForm(formType) { loginForm.style.display = 'none'; signupForm.style.display = 'none'; recoverForm.style.display = 'none'; messageDiv.textContent = ''; recoveredPassword.textContent = '';
+  // Show message
+  function showMessage(form, msg, success = true) {
+    let msgBox = form.querySelector('.message');
+    if (!msgBox) {
+      msgBox = document.createElement('p');
+      msgBox.className = 'message';
+      form.appendChild(msgBox);
+    }
+    msgBox.style.color = success ? 'green' : 'red';
+    msgBox.textContent = msg;
+  }
 
-if (formType === 'login') loginForm.style.display = 'block'; else if (formType === 'signup') signupForm.style.display = 'block'; else if (formType === 'recover') recoverForm.style.display = 'block'; }
+  // Signup
+  signupForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = document.getElementById('signupUsername').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
 
-switchForm('login');
+    if (!username || !email || !password) {
+      showMessage(signupForm, 'All fields are required', false);
+      return;
+    }
 
-signupForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('signupUsername').value.trim(); const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPassword').value;
+    try {
+      const result = await db.allDocs({ include_docs: true });
+      const exists = result.rows.some(row =>
+        row.doc.username === username || row.doc.email === email
+      );
 
-if (!username || !email || !password) return showMessage('All fields are required', true);
+      if (exists) {
+        showMessage(signupForm, 'Username or Email already exists', false);
+        return;
+      }
 
-try { const result = await db.allDocs({ include_docs: true }); const exists = result.rows.find(row => row.doc.username === username || row.doc.email === email); if (exists) return showMessage('Username or Email already exists', true);
+      const user = {
+        _id: 'user_' + username,
+        username,
+        email,
+        password,
+      };
 
-const user = { _id: new Date().toISOString(), username, email, password };
-await db.put(user);
-gun.get('macx_users').get(username).put({ email, password });
-showMessage('Account created successfully');
-signupForm.reset();
+      await db.put(user);
+      gun.get('macx_users').get(username).put({ email, password });
 
-} catch (err) { showMessage('Signup failed', true); } });
+      showMessage(signupForm, 'Account created successfully');
+      signupForm.reset();
+    } catch (err) {
+      console.error('Signup Error:', err);
+      showMessage(signupForm, 'Signup failed: ' + err.message, false);
+    }
+  });
 
-loginForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('loginUsername').value.trim(); const password = document.getElementById('loginPassword').value;
+  // Login
+  loginForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
 
-try { const result = await db.allDocs({ include_docs: true }); const user = result.rows.find(row => row.doc.username === username && row.doc.password === password); if (!user) return showMessage('Invalid username or password', true);
+    if (!username || !password) {
+      showMessage(loginForm, 'Both fields are required', false);
+      return;
+    }
 
-localStorage.setItem('macxLoggedInUser', username);
-showMessage('Login successful');
-setTimeout(() => window.location.href = 'home.html', 1000);
+    try {
+      const result = await db.allDocs({ include_docs: true });
+      const user = result.rows.find(
+        row => row.doc.username === username && row.doc.password === password
+      );
 
-} catch (err) { showMessage('Login failed', true); } });
+      if (user) {
+        sessionStorage.setItem('macx_user', username);
+        window.location.href = 'home.html';
+      } else {
+        showMessage(loginForm, 'Invalid username or password', false);
+      }
+    } catch (err) {
+      console.error('Login Error:', err);
+      showMessage(loginForm, 'Login failed: ' + err.message, false);
+    }
+  });
 
-recoverForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('recoverUsername').value.trim(); const email = document.getElementById('recoverEmail').value.trim();
+  // Recover Password
+  recoverForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = document.getElementById('recoverUsername').value.trim();
+    const email = document.getElementById('recoverEmail').value.trim();
 
-try { const result = await db.allDocs({ include_docs: true }); const user = result.rows.find(row => row.doc.username === username && row.doc.email === email); if (!user) return showMessage('No account matches provided info', true);
+    if (!username || !email) {
+      showMessage(recoverForm, 'Both fields are required', false);
+      return;
+    }
 
-recoveredPassword.textContent = `Password: ${user.doc.password}`;
-showMessage('Password recovered');
+    try {
+      const result = await db.allDocs({ include_docs: true });
+      const user = result.rows.find(
+        row => row.doc.username === username && row.doc.email === email
+      );
 
-} catch (err) { showMessage('Recovery failed', true); } });
-
+      if (user) {
+        showMessage(recoverForm, 'Password: ' + user.doc.password);
+      } else {
+        showMessage(recoverForm, 'No account found with these details', false);
+      }
+    } catch (err) {
+      console.error('Recovery Error:', err);
+      showMessage(recoverForm, 'Recovery failed: ' + err.message, false);
+    }
+  });
+});
