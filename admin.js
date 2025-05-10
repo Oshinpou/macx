@@ -1,49 +1,83 @@
-// Connect to the same shared GUN relay used in auth.js
-const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']);
+// Connect to the global GUN relay for storage
+const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
 const users = gun.get('macx_users');
 
+// DOM elements for the admin panel
 const accountList = document.getElementById('accountList');
-const searchInput = document.getElementById('searchUser');
+const searchInput = document.getElementById('searchInput');
+const deleteModal = document.getElementById('deleteModal');
+const deleteConfirm = document.getElementById('deleteConfirm');
+const deleteCancel = document.getElementById('deleteCancel');
 
-// Render users globally with optional filter
-function renderAccounts(filter = '') {
-  accountList.innerHTML = '';
-  users.map().once((data, key) => {
-    if (!data || !data.username || !data.email || !data.password) return;
-    if (filter && !data.username.toLowerCase().includes(filter.toLowerCase())) return;
+// Utility: Show message in the UI
+function showMessage(message, success = false) {
+  const msg = document.createElement('p');
+  msg.textContent = message;
+  msg.style.color = success ? 'green' : 'red';
+  msg.style.marginTop = '0.5rem';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 4000);
+}
 
-    const div = document.createElement('div');
-    div.className = 'account';
-    div.innerHTML = `
-      <strong>Username:</strong> ${data.username}<br>
-      <strong>Email:</strong> ${data.email}<br>
-      <strong>Password:</strong> ${data.password}<br>
-      <button onclick="confirmDelete('${key}')">Delete</button>
-    `;
-    accountList.appendChild(div);
+// Render the accounts list from GUN
+function renderAccounts() {
+  accountList.innerHTML = ''; // Clear current list
+  users.map().once((userData, username) => {
+    if (userData) {
+      const accountItem = document.createElement('div');
+      accountItem.className = 'account-item';
+      accountItem.innerHTML = `
+        <p>Username: ${username}</p>
+        <p>Email: ${userData.email}</p>
+        <button onclick="openDeleteModal('${username}')">Delete</button>
+      `;
+      accountList.appendChild(accountItem);
+    }
   });
 }
 
-// Delete the account globally from GUN
-function confirmDelete(key) {
-  if (
-    confirm("Are you sure you want to delete this account globally?") &&
-    confirm("This action will permanently remove the account from all devices.") &&
-    confirm("Final confirmation: Delete account now?")
-  ) {
-    users.get(key).put(null); // Truly deletes the data
-  }
-}
-
-// Real-time listening
-users.map().on(() => {
-  renderAccounts(searchInput.value);
-});
-
 // Search functionality
 searchInput.addEventListener('input', () => {
-  renderAccounts(searchInput.value);
+  const searchTerm = searchInput.value.toLowerCase();
+  users.map().once((userData, username) => {
+    const accountItem = document.querySelector(`[data-username="${username}"]`);
+    if (accountItem) {
+      const accountText = accountItem.textContent.toLowerCase();
+      if (accountText.includes(searchTerm)) {
+        accountItem.style.display = 'block';
+      } else {
+        accountItem.style.display = 'none';
+      }
+    }
+  });
 });
 
-// Initial render
+// Open delete confirmation modal
+function openDeleteModal(username) {
+  deleteModal.style.display = 'block';
+  deleteConfirm.onclick = () => deleteAccount(username);
+  deleteCancel.onclick = () => {
+    deleteModal.style.display = 'none'; // Close the modal without deleting
+  };
+}
+
+// Delete account permanently
+function deleteAccount(username) {
+  users.get(username).put(null, (ack) => {
+    if (ack.err) {
+      showMessage('Error deleting account. Please try again.', false);
+      return;
+    }
+    showMessage('Account deleted successfully!', true);
+    renderAccounts(); // Re-render the accounts list
+    deleteModal.style.display = 'none'; // Close the modal
+  });
+}
+
+// Listen for real-time updates across all devices and render accounts
+users.map().on((data, username) => {
+  renderAccounts(); // Re-render the accounts list when there are any changes
+});
+
+// Initial render of accounts when the page loads
 renderAccounts();
