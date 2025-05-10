@@ -1,21 +1,72 @@
-// auth.js with public GUN relay for global sync
-
-const gun = Gun({ peers: ['https://gun-manhattan.herokuapp.com/gun'] });
-
+// Connect to a public GUN relay for global storage
+const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
 const users = gun.get('macx_users');
 
-function showMessage(msg, isError = false) { const el = document.createElement('p'); el.textContent = msg; el.style.color = isError ? 'red' : 'green'; document.querySelector('.container').appendChild(el); setTimeout(() => el.remove(), 4000); }
+// Elements
+const signupForm = document.getElementById('signupForm');
+const loginForm = document.getElementById('loginForm');
+const recoverForm = document.getElementById('recoverForm');
 
-// Sign Up const signupForm = document.getElementById('signupForm'); signupForm.addEventListener('submit', e => { e.preventDefault(); const username = document.getElementById('signupUsername').value.trim(); const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPassword').value;
+// Utility: Show message
+function showMessage(message, success = false) {
+  const msg = document.createElement('p');
+  msg.textContent = message;
+  msg.style.color = success ? 'green' : 'red';
+  msg.style.marginTop = '0.5rem';
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 4000);
+}
 
-users.get(username).once(data => { if (data) { showMessage('Username already exists', true); } else { users.get(username).put({ email, password }); showMessage('Account successfully created'); signupForm.reset(); } }); });
+// SIGNUP
+signupForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const username = document.getElementById('signupUsername').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value.trim();
 
-// Login const loginForm = document.getElementById('loginForm'); loginForm.addEventListener('submit', e => { e.preventDefault(); const username = document.getElementById('loginUsername').value.trim(); const password = document.getElementById('loginPassword').value;
+  if (!username || !email || !password) return showMessage("All signup fields required");
 
-users.get(username).once(data => { if (!data) { showMessage('User not found', true); } else if (data.password !== password) { showMessage('Incorrect password', true); } else { localStorage.setItem('macxLoggedInUser', username); showMessage('Login successful'); setTimeout(() => { window.location.href = 'home.html'; // Redirect to next page }, 1000); } }); });
+  users.get(username).once((data) => {
+    if (data) return showMessage("Username already exists");
 
-// Recover Password const recoverForm = document.getElementById('recoverForm'); recoverForm.addEventListener('submit', e => { e.preventDefault(); const username = document.getElementById('recoverUsername').value.trim(); const email = document.getElementById('recoverEmail').value.trim();
+    // Check for duplicate email
+    users.map().once((user) => {
+      if (user?.email === email) return showMessage("Email already used");
+    });
 
-users.get(username).once(data => { if (!data) { showMessage('Username not found', true); } else if (data.email !== email) { showMessage('Email does not match', true); } else { showMessage(Your password is: ${data.password}); } }); });
+    users.get(username).put({ username, email, password }, (ack) => {
+      if (ack.err) return showMessage("Signup failed, try again");
+      showMessage("Signup successful!", true);
+    });
+  });
+});
 
-                                  
+// LOGIN
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+
+  users.get(username).once((data) => {
+    if (!data) return showMessage("Account does not exist");
+    if (data.password !== password) return showMessage("Incorrect password");
+
+    localStorage.setItem('macx_loggedInUser', username);
+    showMessage("Login successful!", true);
+    setTimeout(() => window.location.href = "home.html", 1500);
+  });
+});
+
+// RECOVER PASSWORD
+recoverForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const username = document.getElementById('recoverUsername').value.trim();
+  const email = document.getElementById('recoverEmail').value.trim();
+
+  users.get(username).once((data) => {
+    if (!data) return showMessage("Username not found");
+    if (data.email !== email) return showMessage("Email does not match");
+
+    showMessage(`Recovered Password: ${data.password}`, true);
+  });
+});
