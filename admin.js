@@ -1,52 +1,47 @@
-// Connect to GUN relay for global sync
-const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Replace with your own relay if needed
+// Use a public Gun relay or your own deployed peer
+const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Replace with your relay
 const users = gun.get('macx_users');
 
 const accountList = document.getElementById('accountList');
 const searchInput = document.getElementById('searchUser');
 
-// Function to render all accounts with optional filter
+// Render accounts with optional filter
 function renderAccounts(filter = '') {
   accountList.innerHTML = '';
   users.map().once((data, key) => {
     if (!data || !data.username || !data.email || !data.password) return;
-
-    const username = data.username.toLowerCase();
-    const matchesSearch = username.includes(filter.toLowerCase());
-
-    if (!matchesSearch) return;
+    if (filter && !data.username.toLowerCase().includes(filter.toLowerCase())) return;
 
     const div = document.createElement('div');
-    div.className = data.deleted ? 'account deleted' : 'account';
+    div.className = 'account';
     div.innerHTML = `
       <strong>Username:</strong> ${data.username}<br>
       <strong>Email:</strong> ${data.email}<br>
       <strong>Password:</strong> ${data.password}<br>
-      ${data.deleted ? '<em>(Deleted)</em>' : `<button onclick="confirmDelete('${key}')">Delete</button>`}
+      <button onclick="confirmDelete('${key}')">Delete</button>
     `;
     accountList.appendChild(div);
   });
 }
 
-// Delete account with 3 confirmations
+// Permanently delete user from GUN
 function confirmDelete(key) {
-  if (!confirm("Are you sure you want to delete this account?")) return;
-  if (!confirm("This action will delete the account across all devices.")) return;
+  if (!confirm("Are you sure you want to delete this account globally?")) return;
+  if (!confirm("This will remove the account from all devices permanently.")) return;
   if (!confirm("Final confirmation: Delete permanently?")) return;
 
-  users.get(key).put({ deleted: true });
-  renderAccounts(searchInput.value);
+  users.get(key).put(null); // Completely delete from GUN
 }
 
-// Search functionality
+// Search bar
 searchInput.addEventListener('input', () => {
   renderAccounts(searchInput.value);
 });
 
-// Live reload of updates from other devices
+// Real-time updates from GUN
 users.map().on(() => {
   renderAccounts(searchInput.value);
 });
 
-// Initial render
+// Initial load
 renderAccounts();
