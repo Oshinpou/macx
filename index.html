@@ -4,27 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MACX Cosmetics - Auth</title>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/pouchdb@7.2.2/dist/pouchdb.min.js"></script>
   <script defer src="auth.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1 class="title">MACX Cosmetics</h1>
+    <h1 class="title">MACX Cosmetics Auth</h1>
 
+    <!-- Mode Selector -->
+    <div class="mode-switch">
+      <label><input type="radio" name="mode" value="signup" checked> Sign Up</label>
+      <label><input type="radio" name="mode" value="login"> Login</label>
+      <label><input type="radio" name="mode" value="recover"> Recover Password</label>
+    </div>
+
+    <!-- Auth Form -->
     <form id="universalForm" class="auth-form">
-      <div class="mode-selector">
-        <label><input type="radio" name="mode" value="signup" checked> Sign Up</label>
-        <label><input type="radio" name="mode" value="login"> Login</label>
-        <label><input type="radio" name="mode" value="recover"> Recover Password</label>
-      </div>
-
       <input type="text" id="username" placeholder="Username" required>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-
+      <input type="email" id="email" placeholder="Email (for Signup or Recover)">
+      <input type="password" id="password" placeholder="Password (for Signup or Login)">
       <button type="submit">Submit</button>
+      <p id="errorMsg" style="color:red;"></p>
     </form>
 
     <p class="admin-link">Admin? <a href="admin-login.html">Login here</a></p>
