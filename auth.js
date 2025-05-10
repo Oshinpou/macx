@@ -1,50 +1,45 @@
-// File: auth.js
+// File: auth.js const gun = Gun(); const db = new PouchDB('macx_users');
 
-const gun = Gun();
-const db = new PouchDB("macx_users");
+const loginForm = document.getElementById('loginForm'); const signupForm = document.getElementById('signupForm'); const recoverForm = document.getElementById('recoverForm'); const messageDiv = document.getElementById('message'); const recoveredPassword = document.getElementById('recoveredPassword');
 
-document.getElementById("universalForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+function showMessage(text, isError = false) { messageDiv.textContent = text; messageDiv.style.color = isError ? 'red' : 'green'; }
 
-  const mode = document.querySelector('input[name="mode"]:checked').value;
-  const username = document.getElementById("username").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+function switchForm(formType) { loginForm.style.display = 'none'; signupForm.style.display = 'none'; recoverForm.style.display = 'none'; messageDiv.textContent = ''; recoveredPassword.textContent = '';
 
-  if (!username) return alert("Username is required.");
+if (formType === 'login') loginForm.style.display = 'block'; else if (formType === 'signup') signupForm.style.display = 'block'; else if (formType === 'recover') recoverForm.style.display = 'block'; }
 
-  try {
-    const existingUsers = await db.allDocs({ include_docs: true });
-    const users = existingUsers.rows.map(row => row.doc);
+switchForm('login');
 
-    if (mode === "signup") {
-      if (!email || !password) return alert("Email and password are required.");
-      const userExists = users.find(u => u.username === username || u.email === email);
-      if (userExists) return alert("Username or email already exists!");
+signupForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('signupUsername').value.trim(); const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPassword').value;
 
-      const newUser = { _id: username, username, email, password };
-      await db.put(newUser);
-      gun.get("users").get(username).put(newUser);
-      alert("Account created successfully!");
+if (!username || !email || !password) return showMessage('All fields are required', true);
 
-    } else if (mode === "login") {
-      if (!password) return alert("Password is required.");
-      const user = users.find(u => u.username === username && u.password === password);
-      if (!user) return alert("Invalid username or password!");
+try { const result = await db.allDocs({ include_docs: true }); const exists = result.rows.find(row => row.doc.username === username || row.doc.email === email); if (exists) return showMessage('Username or Email already exists', true);
 
-      localStorage.setItem("macx_user", username);
-      alert("Login successful!");
-      window.location.href = "homepage.html";
+const user = { _id: new Date().toISOString(), username, email, password };
+await db.put(user);
+gun.get('macx_users').get(username).put({ email, password });
+showMessage('Account created successfully');
+signupForm.reset();
 
-    } else if (mode === "recover") {
-      if (!email) return alert("Email is required.");
-      const user = users.find(u => u.username === username && u.email === email);
-      if (!user) return alert("Account not found!");
-      alert(`Recovered Password: ${user.password}`);
-    }
+} catch (err) { showMessage('Signup failed', true); } });
 
-  } catch (err) {
-    console.error(err);
-    alert("An error occurred. Please try again.");
-  }
-});
+loginForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('loginUsername').value.trim(); const password = document.getElementById('loginPassword').value;
+
+try { const result = await db.allDocs({ include_docs: true }); const user = result.rows.find(row => row.doc.username === username && row.doc.password === password); if (!user) return showMessage('Invalid username or password', true);
+
+localStorage.setItem('macxLoggedInUser', username);
+showMessage('Login successful');
+setTimeout(() => window.location.href = 'home.html', 1000);
+
+} catch (err) { showMessage('Login failed', true); } });
+
+recoverForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('recoverUsername').value.trim(); const email = document.getElementById('recoverEmail').value.trim();
+
+try { const result = await db.allDocs({ include_docs: true }); const user = result.rows.find(row => row.doc.username === username && row.doc.email === email); if (!user) return showMessage('No account matches provided info', true);
+
+recoveredPassword.textContent = `Password: ${user.doc.password}`;
+showMessage('Password recovered');
+
+} catch (err) { showMessage('Recovery failed', true); } });
+
