@@ -1,57 +1,56 @@
 // File: auth.js const db = new PouchDB('macx_users'); const gun = Gun();
 
-let loggedInUser = null;
-
-// Load logged-in user if already saved if (localStorage.getItem('macxLoggedIn')) { loggedInUser = JSON.parse(localStorage.getItem('macxLoggedIn')); showLoggedInUser(); }
-
-function showLoggedInUser() { if (loggedInUser) { document.querySelectorAll('.logged-in').forEach(el => { el.innerHTML = Logged in as: <strong>${loggedInUser.username}</strong>; }); } }
-
-// Handle Sign Up const signupForm = document.getElementById('signupForm'); if (signupForm) { signupForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('signupUsername').value.trim(); const email = document.getElementById('signupEmail').value.trim(); const password = document.getElementById('signupPassword').value;
+// SIGNUP const signupForm = document.getElementById('signupForm'); if (signupForm) { signupForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('signupEmail').value.trim(); const username = document.getElementById('signupUsername').value.trim(); const password = document.getElementById('signupPassword').value;
 
 try {
-  const existing = await db.get(email);
-  alert('Email already exists. Try login or recover.');
+  const existing = await db.get(username);
+  alert('Username already exists.');
 } catch (err) {
   if (err.status === 404) {
-    await db.put({ _id: email, username, email, password });
-    gun.get('macx_users').get(username).put({ username, email, password });
-    alert('Signup successful. Please log in.');
+    const user = { _id: username, username, email, password };
+    await db.put(user);
+    gun.get('macx_users').get(username).put(user);
+    alert('Signup successful. Please login.');
     signupForm.reset();
+  } else {
+    console.error(err);
+    alert('Signup failed.');
   }
 }
 
 }); }
 
-// Handle Login const loginForm = document.getElementById('loginForm'); if (loginForm) { loginForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('loginEmail').value.trim(); const password = document.getElementById('loginPassword').value;
+// LOGIN const loginForm = document.getElementById('loginForm'); if (loginForm) { loginForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('loginUsername').value.trim(); const password = document.getElementById('loginPassword').value;
 
 try {
-  const doc = await db.get(email);
-  if (doc.password === password) {
-    loggedInUser = doc;
-    localStorage.setItem('macxLoggedIn', JSON.stringify(doc));
-    alert('Login successful.');
-    showLoggedInUser();
+  const user = await db.get(username);
+  if (user.password === password) {
+    localStorage.setItem('loggedInUser', username);
+    alert('Login successful!');
+    window.location.href = 'home.html';
   } else {
     alert('Incorrect password.');
   }
-} catch {
-  alert('Account not found. Please sign up.');
+} catch (err) {
+  alert('User not found.');
 }
 
 }); }
 
-// Handle Password Recovery const recoverForm = document.getElementById('recoverForm'); if (recoverForm) { recoverForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('recoverEmail').value.trim(); const username = document.getElementById('recoverUsername').value.trim();
+// RECOVER PASSWORD const recoverForm = document.getElementById('recoverForm'); if (recoverForm) { recoverForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('recoverEmail').value.trim(); const username = document.getElementById('recoverUsername').value.trim();
 
 try {
-  const doc = await db.get(email);
-  if (doc.username === username) {
-    alert(`Password recovery success. Your password is: ${doc.password}`);
+  const user = await db.get(username);
+  if (user.email === email) {
+    alert(`Your password is: ${user.password}`);
   } else {
-    alert('Username does not match.');
+    alert('Email does not match username.');
   }
-} catch {
-  alert('No account found with that email.');
+} catch (err) {
+  alert('User not found.');
 }
 
 }); }
+
+// GLOBAL USERNAME DISPLAY const displayUser = document.getElementById('loggedInUser'); if (displayUser) { const user = localStorage.getItem('loggedInUser'); if (user) { displayUser.textContent = user; } }
 
