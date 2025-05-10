@@ -1,23 +1,20 @@
-// File: admin.js const adminUser = { username: "macxadmin", password: "supersecure123" };
+// File: admin.js
 
-// Admin login handler const adminLoginForm = document.getElementById('adminLoginForm'); if (adminLoginForm) { adminLoginForm.addEventListener('submit', (e) => { e.preventDefault(); const username = document.getElementById('adminUsername').value.trim(); const password = document.getElementById('adminPassword').value;
+// Initialize GUN and global storage const gun = Gun(); const db = new PouchDB('macx_admin');
 
-if (username === adminUser.username && password === adminUser.password) {
-  localStorage.setItem('macxAdminLoggedIn', JSON.stringify(adminUser));
-  window.location.href = 'admin-panel.html';
-} else {
-  alert('Invalid admin credentials.');
-}
+const accountList = document.getElementById('accountList'); const deletedAccounts = document.getElementById('deletedAccounts'); const searchInput = document.getElementById('searchUsername');
 
-}); }
+// Function to display accounts function displayAccounts(accounts) { accountList.innerHTML = ''; accounts.forEach(acc => { const div = document.createElement('div'); div.className = 'account'; div.innerHTML = <strong>Username:</strong> ${acc.username} <br> <strong>Email:</strong> ${acc.email} <br> <strong>Password:</strong> ${acc.password} <br> <button onclick="confirmDelete('${acc.username}')">Delete</button>; accountList.appendChild(div); }); }
 
-// Admin panel logic if (window.location.pathname.includes('admin-panel.html')) { const loggedAdmin = JSON.parse(localStorage.getItem('macxAdminLoggedIn')); if (!loggedAdmin || loggedAdmin.username !== adminUser.username) { alert("Unauthorized access. Redirecting to admin login."); window.location.href = 'admin-login.html'; } else { document.getElementById('adminUser').innerText = loggedAdmin.username; showAllUsers(); } }
+// Function to show deleted account info function showDeletedAccount(username) { const div = document.createElement('div'); div.className = 'account'; div.innerText = Deleted: ${username}; deletedAccounts.appendChild(div); }
 
-async function showAllUsers() { const userResults = document.getElementById('userResults'); userResults.innerHTML = '';
+// Confirm delete in 3 steps let deleteCounter = {}; function confirmDelete(username) { deleteCounter[username] = (deleteCounter[username] || 0) + 1; if (deleteCounter[username] === 3) { gun.get('accounts').get(username).put(null); db.get(username).then(doc => db.remove(doc)); showDeletedAccount(username); alert(Account '${username}' deleted.); deleteCounter[username] = 0; fetchAccounts(); } else { alert(Click ${3 - deleteCounter[username]} more time(s) to confirm delete.); } }
 
-try { const result = await new PouchDB('macx_users').allDocs({ include_docs: true }); result.rows.forEach(row => { const user = row.doc; const div = document.createElement('div'); div.innerHTML = <hr> <p><strong>Username:</strong> ${user.username}</p> <p><strong>Email:</strong> ${user.email}</p> <button onclick="confirmDelete('${user._id}', '${user._rev}')">Delete</button>; userResults.appendChild(div); }); } catch (err) { console.error(err); } }
+// Fetch accounts from GUN and local db function fetchAccounts() { const accounts = []; gun.get('accounts').map().once((data, key) => { if (data && data.username && data.email && data.password) { accounts.push({ username: key, email: data.email, password: data.password }); db.put({ _id: key, username: key, email: data.email, password: data.password }).catch(() => {}); } displayAccounts(accounts); }); }
 
-let confirmCounter = 0; function confirmDelete(id, rev) { confirmCounter++; if (confirmCounter < 3) { alert(Click delete ${3 - confirmCounter} more time(s) to confirm.); } else { new PouchDB('macx_users').remove(id, rev).then(() => { alert('User deleted.'); confirmCounter = 0; showAllUsers(); }).catch(err => console.error(err)); } }
+// Search functionality searchInput.addEventListener('input', () => { const query = searchInput.value.trim().toLowerCase(); if (!query) return fetchAccounts();
 
-function searchUser() { const usernameSearch = document.getElementById('searchInput').value.trim().toLowerCase(); const allResults = document.querySelectorAll('#userResults > div'); allResults.forEach(div => { div.style.display = div.innerHTML.toLowerCase().includes(usernameSearch) ? 'block' : 'none'; }); }
+gun.get('accounts').get(query).once(data => { if (data) { displayAccounts([{ username: query, email: data.email, password: data.password }]); } else { accountList.innerHTML = '<p>No account found.</p>'; } }); });
+
+// Load accounts on start fetchAccounts();
 
