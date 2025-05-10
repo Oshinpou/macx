@@ -1,11 +1,11 @@
-// Use a public or your own Gun relay server to ensure cross-device sync
-const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Replace with your own server for full control
+// Connect to GUN relay for global sync
+const gun = Gun(['https://gun-macx-server.herokuapp.com/gun']); // Replace with your own relay if needed
 const users = gun.get('macx_users');
 
 const accountList = document.getElementById('accountList');
 const searchInput = document.getElementById('searchUser');
 
-// Render all accounts including deleted (marked)
+// Function to render all accounts with optional filter
 function renderAccounts(filter = '') {
   accountList.innerHTML = '';
   users.map().once((data, key) => {
@@ -28,18 +28,23 @@ function renderAccounts(filter = '') {
   });
 }
 
-// Confirm delete in 3 steps and store globally
+// Delete account with 3 confirmations
 function confirmDelete(key) {
   if (!confirm("Are you sure you want to delete this account?")) return;
-  if (!confirm("This action is permanent across all devices. Proceed?")) return;
-  if (!confirm("Final confirmation. DELETE account?")) return;
+  if (!confirm("This action will delete the account across all devices.")) return;
+  if (!confirm("Final confirmation: Delete permanently?")) return;
 
   users.get(key).put({ deleted: true });
   renderAccounts(searchInput.value);
 }
 
-// Search input listener
+// Search functionality
 searchInput.addEventListener('input', () => {
+  renderAccounts(searchInput.value);
+});
+
+// Live reload of updates from other devices
+users.map().on(() => {
   renderAccounts(searchInput.value);
 });
 
