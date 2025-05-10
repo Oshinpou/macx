@@ -11,20 +11,18 @@
 </head>
 <body>
   <div class="container">
-    <h1 class="title">Welcome to MACX Cosmetics</h1>
+    <h1 class="title">MACX Cosmetics</h1>
 
     <form id="universalForm" class="auth-form">
       <div class="mode-selector">
-        <label><input type="radio" name="mode" value="signup" checked /> Sign Up</label>
-        <label><input type="radio" name="mode" value="login" /> Login</label>
-        <label><input type="radio" name="mode" value="recover" /> Recover Password</label>
+        <label><input type="radio" name="mode" value="signup" checked> Sign Up</label>
+        <label><input type="radio" name="mode" value="login"> Login</label>
+        <label><input type="radio" name="mode" value="recover"> Recover Password</label>
       </div>
 
-      <input type="text" placeholder="Username" id="username" required />
-
-      <input type="email" placeholder="Email" id="email" />
-
-      <input type="password" placeholder="Password" id="password" />
+      <input type="text" id="username" placeholder="Username" required>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Password">
 
       <button type="submit">Submit</button>
     </form>
