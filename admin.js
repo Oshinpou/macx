@@ -26,6 +26,7 @@ function renderAccounts() {
     if (userData) {
       const accountItem = document.createElement('div');
       accountItem.className = 'account-item';
+      accountItem.dataset.username = username; // Store username as a data attribute
       accountItem.innerHTML = `
         <p>Username: ${username}</p>
         <p>Email: ${userData.email}</p>
@@ -39,15 +40,13 @@ function renderAccounts() {
 // Search functionality
 searchInput.addEventListener('input', () => {
   const searchTerm = searchInput.value.toLowerCase();
-  users.map().once((userData, username) => {
-    const accountItem = document.querySelector(`[data-username="${username}"]`);
-    if (accountItem) {
-      const accountText = accountItem.textContent.toLowerCase();
-      if (accountText.includes(searchTerm)) {
-        accountItem.style.display = 'block';
-      } else {
-        accountItem.style.display = 'none';
-      }
+  const accountItems = document.querySelectorAll('.account-item');
+  accountItems.forEach(item => {
+    const accountText = item.textContent.toLowerCase();
+    if (accountText.includes(searchTerm)) {
+      item.style.display = 'block';
+    } else {
+      item.style.display = 'none';
     }
   });
 });
@@ -61,7 +60,7 @@ function openDeleteModal(username) {
   };
 }
 
-// Delete account permanently
+// Delete account permanently from all devices
 function deleteAccount(username) {
   users.get(username).put(null, (ack) => {
     if (ack.err) {
