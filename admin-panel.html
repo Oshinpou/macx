@@ -1,15 +1,27 @@
 <!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MACX Admin Panel</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="admin.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script defer src="admin.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h2>MACX Admin Panel</h2>
-    <p>Welcome, <span id="adminUser"></span></p><input type="text" id="searchInput" placeholder="Search by username" oninput="searchUser()" />
-<div id="userResults"></div>
-
-  </div>  <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.1/dist/pouchdb.min.js"></script>  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>  <script src="admin.js"></script></body>
+  <div class="admin-container">
+    <h1>MACX Admin Panel</h1>
+    <input type="text" id="searchInput" placeholder="Search username...">
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Password</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="accountList"></tbody>
+    </table>
+  </div>
+</body>
 </html>
