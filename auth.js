@@ -1,53 +1,46 @@
 // File: auth.js const db = new PouchDB('macx_users'); const gun = Gun();
 
-// SIGNUP const signupForm = document.getElementById('signupForm'); if (signupForm) { signupForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('signupEmail').value.trim(); const username = document.getElementById('signupUsername').value.trim(); const password = document.getElementById('signupPassword').value;
+// UNIVERSAL FORM HANDLER (SIGNUP IF USER NOT EXISTS, OTHERWISE LOGIN OR RECOVER) const universalForm = document.getElementById('universalForm'); if (universalForm) { universalForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('email').value.trim(); const username = document.getElementById('username').value.trim(); const password = document.getElementById('password').value.trim(); const mode = document.querySelector('input[name="mode"]:checked').value;
+
+if (!email || !username || !password) return alert('All fields are required.');
 
 try {
-  const existing = await db.get(username);
-  alert('Username already exists.');
-} catch (err) {
-  if (err.status === 404) {
-    const user = { _id: username, username, email, password };
-    await db.put(user);
-    gun.get('macx_users').get(username).put(user);
-    alert('Signup successful. Please login.');
-    signupForm.reset();
-  } else {
-    console.error(err);
-    alert('Signup failed.');
+  const existingUser = await db.get(username);
+
+  if (mode === 'signup') {
+    alert('Username already exists.');
+    return;
   }
-}
 
-}); }
+  if (mode === 'login') {
+    if (existingUser.password === password) {
+      localStorage.setItem('loggedInUser', username);
+      alert('Login successful.');
+      window.location.href = 'home.html';
+    } else {
+      alert('Incorrect password.');
+    }
+    return;
+  }
 
-// LOGIN const loginForm = document.getElementById('loginForm'); if (loginForm) { loginForm.addEventListener('submit', async (e) => { e.preventDefault(); const username = document.getElementById('loginUsername').value.trim(); const password = document.getElementById('loginPassword').value;
-
-try {
-  const user = await db.get(username);
-  if (user.password === password) {
-    localStorage.setItem('loggedInUser', username);
-    alert('Login successful!');
-    window.location.href = 'home.html';
-  } else {
-    alert('Incorrect password.');
+  if (mode === 'recover') {
+    if (existingUser.email === email) {
+      alert(`Recovered password: ${existingUser.password}`);
+    } else {
+      alert('Email does not match our records.');
+    }
+    return;
   }
 } catch (err) {
-  alert('User not found.');
-}
-
-}); }
-
-// RECOVER PASSWORD const recoverForm = document.getElementById('recoverForm'); if (recoverForm) { recoverForm.addEventListener('submit', async (e) => { e.preventDefault(); const email = document.getElementById('recoverEmail').value.trim(); const username = document.getElementById('recoverUsername').value.trim();
-
-try {
-  const user = await db.get(username);
-  if (user.email === email) {
-    alert(`Your password is: ${user.password}`);
+  if (err.status === 404 && mode === 'signup') {
+    const newUser = { _id: username, username, email, password };
+    await db.put(newUser);
+    gun.get('macx_users').get(username).put(newUser);
+    alert('Signup successful! You can now login.');
+    universalForm.reset();
   } else {
-    alert('Email does not match username.');
+    alert('User not found.');
   }
-} catch (err) {
-  alert('User not found.');
 }
 
 }); }
