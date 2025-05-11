@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Support Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    h2 { text-align: center; }
+    .ticket { border: 1px solid #ccc; margin: 10px 0; padding: 10px; border-radius: 5px; }
+    .ticket h3 { margin: 0 0 5px; }
+    .ticket p { margin: 5px 0; }
+  </style>
+</head>
+<body>
+
+  <h2>All Support Requests</h2>
+  <div id="tickets"></div>
+
+  <script>
+    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+    const support = gun.get('macx_support');
+    const ticketsDiv = document.getElementById('tickets');
+
+    support.map().once((data, key) => {
+      if (!data) return;
+
+      const div = document.createElement('div');
+      div.className = 'ticket';
+      div.innerHTML = `
+        <h3>${data.issueTitle}</h3>
+        <p><strong>Name:</strong> ${data.fullName}</p>
+        <p><strong>Phone:</strong> ${data.phone}</p>
+        <p><strong>Email:</strong> ${data.email}</p>
+        <p><strong>Message:</strong><br>${data.messageText}</p>
+        <small><strong>Submitted:</strong> ${new Date(data.timestamp).toLocaleString()}</small>
+      `;
+      ticketsDiv.appendChild(div);
+    });
+  </script>
+
+</body>
+</html>
