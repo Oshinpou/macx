@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Support Form</title>
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    form { max-width: 500px; margin: auto; display: flex; flex-direction: column; gap: 12px; }
+    textarea { height: 150px; }
+    input, textarea, button { padding: 10px; font-size: 16px; }
+    #message { text-align: center; color: green; }
+  </style>
+</head>
+<body>
+
+  <h2>Support Request Form</h2>
+  <form id="supportForm">
+    <input type="text" id="fullName" placeholder="Full Name" required>
+    <input type="tel" id="phone" placeholder="Phone Number with Country Code" required>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="text" id="issueTitle" placeholder="Issue Title" required>
+    <textarea id="messageText" placeholder="Describe your issue (max 5000 words)" maxlength="30000" required></textarea>
+    <button type="submit">Submit Support Request</button>
+  </form>
+  <div id="message"></div>
+
+  <script>
+    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+    const support = gun.get('macx_support');
+
+    const form = document.getElementById('supportForm');
+    const messageBox = document.getElementById('message');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const fullName = document.getElementById('fullName').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const issueTitle = document.getElementById('issueTitle').value.trim();
+      const messageText = document.getElementById('messageText').value.trim();
+
+      const timestamp = Date.now();
+      const id = `${email}_${timestamp}`;
+
+      support.get(id).put({
+        fullName, phone, email, issueTitle, messageText, timestamp
+      }, (ack) => {
+        if (ack.err) {
+          messageBox.textContent = "Submission failed. Try again.";
+          messageBox.style.color = 'red';
+        } else {
+          messageBox.textContent = "Support request submitted successfully!";
+          messageBox.style.color = 'green';
+          form.reset();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
