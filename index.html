@@ -32,12 +32,14 @@
   <button type="submit">Recover</button>
 </form>
 
-<form id="deleteAccountForm">
-  <input id="deleteUsername" />
-  <input id="deleteEmail" />
-  <input id="deletePassword" />
-  <input id="deleteConfirmUsername" />
-  <input id="deleteConfirmText" placeholder="Type DELETE ACCOUNT" />
+<form id="deleteForm" class="auth-form">
+  <h2>Delete Account</h2>
+  <input type="text" id="deleteUsername" placeholder="Username" required>
+  <input type="email" id="deleteEmail" placeholder="Email" required>
+  <input type="password" id="deletePassword" placeholder="Password" required>
+  <label><input type="checkbox" id="confirmDelete1"> Confirm delete step 1</label>
+  <label><input type="checkbox" id="confirmDelete2"> Confirm delete step 2</label>
+  <label><input type="checkbox" id="confirmDelete3"> Confirm delete step 3</label>
   <button type="submit">Delete Account</button>
 </form>
 
