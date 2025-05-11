@@ -1,21 +1,32 @@
 document.addEventListener("DOMContentLoaded", () => {
   const username = localStorage.getItem("macx_loggedInUser");
   const userDisplay = document.getElementById("userDisplay");
-  const notLoggedIn = document.getElementById("notLoggedIn");
   const loggedInSection = document.getElementById("loggedInSection");
+  const notLoggedIn = document.getElementById("notLoggedIn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const loginRedirectBtn = document.getElementById("loginRedirectBtn");
 
   if (username) {
-    userDisplay.textContent = `Welcome, ${username}`;
-    loggedInSection.style.display = "block";
-    notLoggedIn.style.display = "none";
-  } else {
-    loggedInSection.style.display = "none";
-    notLoggedIn.style.display = "block";
-  }
+    // User is logged in
+    if (userDisplay) userDisplay.textContent = `Welcome, ${username}`;
+    if (loggedInSection) loggedInSection.style.display = "block";
+    if (notLoggedIn) notLoggedIn.style.display = "none";
 
-  logoutBtn?.addEventListener("click", () => {
-    localStorage.removeItem("macx_loggedInUser");
-    window.location.reload();
-  });
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        localStorage.removeItem("macx_loggedInUser");
+        window.location.replace("index.html");
+      });
+    }
+  } else {
+    // User is not logged in
+    if (loggedInSection) loggedInSection.style.display = "none";
+    if (notLoggedIn) notLoggedIn.style.display = "block";
+
+    if (loginRedirectBtn) {
+      loginRedirectBtn.addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+    }
+  }
 });
