@@ -1,58 +1,68 @@
-const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+// Connect to a public persistent GUN relay
+const gun = Gun(['https://gunjs.herokuapp.com/gun']);
 const users = gun.get('macx_users');
-const accountsList = document.getElementById('accountsList');
+
+// Elements
+const userTable = document.getElementById('userTableBody');
 const searchInput = document.getElementById('searchInput');
 
-let userData = {}; // Store all loaded users
+// Store user data in memory
+const userData = {};
 
-// Render a single user box
-function renderUser(username, data) {
-  const container = document.createElement('div');
-  container.className = 'user-box';
-  container.dataset.username = username;
-
-  const info = document.createElement('p');
-  info.textContent = `Username: ${username}, Email: ${data.email}, Password: ${data.password}`;
-
-  const delBtn = document.createElement('button');
-  delBtn.textContent = 'Delete User';
-  let confirmStage = 0;
-
-  delBtn.addEventListener('click', () => {
-    if (confirmStage === 0) {
-      delBtn.textContent = 'Confirm (1/3)';
-      confirmStage++;
-    } else if (confirmStage === 1) {
-      delBtn.textContent = 'Confirm (2/3)';
-      confirmStage++;
-    } else if (confirmStage === 2) {
-      users.get(username).put(null); // Global deletion
-      users.get(username).put({ deleted: true }); // Mark as deleted
-      delBtn.textContent = 'Deleted';
-      container.style.opacity = '0.5';
-    }
-  });
-
-  container.appendChild(info);
-  container.appendChild(delBtn);
-  accountsList.appendChild(container);
-}
-
-// Load all accounts
-users.map().once((data, username) => {
+// Real-time listener for all users
+users.map().on((data, username) => {
   if (!data || data.deleted || !username) return;
   userData[username] = data;
-  renderUser(username, data);
+  renderUsers();
 });
 
-// Search filter
-searchInput.addEventListener('input', () => {
-  const query = searchInput.value.toLowerCase();
-  accountsList.innerHTML = '';
+// Render users based on search
+function renderUsers() {
+  const search = searchInput.value.trim().toLowerCase();
+  userTable.innerHTML = '';
 
   Object.entries(userData).forEach(([username, data]) => {
-    if (username.toLowerCase().includes(query)) {
-      renderUser(username, data);
-    }
+    if (!username.toLowerCase().includes(search)) return;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${data.username}</td>
+      <td>${data.email}</td>
+      <td>${data.password}</td>
+      <td><button onclick="confirmDelete('${username}')">Delete</button></td>
+    `;
+    userTable.appendChild(row);
   });
-});
+}
+
+// Search input listener
+searchInput.addEventListener('input', renderUsers);
+
+// Confirm delete with 3 confirmations
+function confirmDelete(username) {
+  const confirmations = [
+    "Are you sure you want to delete this account?",
+    "This action is permanent. Proceed?",
+    "Final confirmation: Delete the account?"
+  ];
+
+  let i = 0;
+  function nextConfirm() {
+    if (i < confirmations.length) {
+      if (confirm(confirmations[i++])) {
+        nextConfirm();
+      }
+    } else {
+      users.get(username).put({ deleted: true }, (ack) => {
+        if (ack.err) {
+          alert("Failed to delete user.");
+        } else {
+          delete userData[username];
+          renderUsers();
+          alert("User deleted permanently.");
+        }
+      });
+    }
+  }
+  nextConfirm();
+}
