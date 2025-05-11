@@ -99,3 +99,31 @@ deleteForm?.addEventListener('submit', (e) => {
     localStorage.removeItem('macx_loggedInUser');
   });
 });
+
+// CHANGE PASSWORD
+const changeForm = document.getElementById('changeForm');
+
+changeForm?.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById('changeUsername').value.trim();
+  const email = document.getElementById('changeEmail').value.trim();
+  const oldPassword = document.getElementById('changeOldPassword').value.trim();
+  const newPassword = document.getElementById('changeNewPassword').value.trim();
+
+  if (!username || !email || !oldPassword || !newPassword) {
+    return showMessage("All change password fields required");
+  }
+
+  users.get(username).once((data) => {
+    if (!data) return showMessage("Username not found");
+    if (data.email !== email) return showMessage("Email mismatch");
+    if (data.password !== oldPassword) return showMessage("Old password incorrect");
+
+    // Update password
+    users.get(username).put({ ...data, password: newPassword }, (ack) => {
+      if (ack.err) return showMessage("Password change failed. Try again.");
+      showMessage("Password updated successfully!", true);
+    });
+  });
+});
