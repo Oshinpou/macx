@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MACX Home</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script defer src="home.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="notLoggedIn" style="display: none;">
+  <h2>You are not logged in.</h2>
+  <button id="loginRedirectBtn">Login First</button>
+</div>
+
+<div id="loggedInSection" style="display: none;">
+  <h1 id="userDisplay">Welcome, User</h1>
+  <button id="logoutBtn">Logout</button>
+  <p>You are now logged in. User-only content can go here.</p>
+</div>
+  </div>
+</body>
+</html>
