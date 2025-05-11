@@ -5,146 +5,90 @@
   <title>Admin Support Panel - MACX</title>
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    #controls {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin: 20px auto;
-      flex-wrap: wrap;
-    }
-    input, select {
-      padding: 10px;
-      font-size: 14px;
-      width: 250px;
-      max-width: 90vw;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    #tickets {
-      max-width: 900px;
-      margin: 0 auto;
-    }
+    body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+    h2 { text-align: center; }
     .ticket {
-      background: white;
+      background: #fff;
       border: 1px solid #ddd;
+      border-radius: 6px;
       padding: 15px;
-      border-radius: 5px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      margin: 15px auto;
+      max-width: 800px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       position: relative;
     }
-    .ticket h3 {
-      margin-top: 0;
-      color: #222;
-    }
-    .ticket p {
-      margin: 5px 0;
-      color: #444;
-    }
-    .ticket small {
-      display: block;
-      margin-top: 10px;
-      color: #666;
-    }
+    .ticket h3 { margin-top: 0; }
+    .ticket p, .ticket small { margin: 5px 0; }
     .ticket button {
       position: absolute;
       top: 15px;
       right: 15px;
-      background-color: #e74c3c;
-      color: white;
+      background: #e74c3c;
       border: none;
-      padding: 5px 10px;
-      border-radius: 3px;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
       cursor: pointer;
     }
     .ticket button:hover {
-      background-color: #c0392b;
+      background: #c0392b;
     }
   </style>
 </head>
 <body>
 
-  <h2>Admin Support Panel</h2>
-
-  <div id="controls">
-    <input type="text" id="searchBox" placeholder="Search by name, email, or title">
-    <select id="sortSelect">
-      <option value="newest">Sort by Newest</option>
-      <option value="oldest">Sort by Oldest</option>
-    </select>
-  </div>
-
-  <div id="tickets"></div>
+  <h2>MACX Global Admin Support Panel</h2>
+  <div id="ticketList"></div>
 
   <script>
     const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-    const support = gun.get('macx_support');
-    const ticketsDiv = document.getElementById('tickets');
-    const searchBox = document.getElementById('searchBox');
-    const sortSelect = document.getElementById('sortSelect');
+    const support = gun.get('macx_support_global');
+    const ticketList = document.getElementById('ticketList');
+    const seen = new Set();
 
-    let allTickets = [];
+    function renderTicket(ticket, key) {
+      if (seen.has(key)) return;
+      seen.add(key);
 
-    function renderTickets() {
-      let filter = searchBox.value.toLowerCase();
-      let sorted = allTickets
-        .filter(t => 
-          t.fullName.toLowerCase().includes(filter) || 
-          t.email.toLowerCase().includes(filter) || 
-          t.issueTitle.toLowerCase().includes(filter)
-        );
+      const div = document.createElement('div');
+      div.className = 'ticket';
+      div.id = key;
 
-      if (sortSelect.value === "newest") {
-        sorted.sort((a, b) => b.timestamp - a.timestamp);
-      } else {
-        sorted.sort((a, b) => a.timestamp - b.timestamp);
-      }
+      div.innerHTML = `
+        <h3>${ticket.issueTitle}</h3>
+        <p><strong>Name:</strong> ${ticket.fullName}</p>
+        <p><strong>Phone:</strong> ${ticket.phone}</p>
+        <p><strong>Email:</strong> ${ticket.email}</p>
+        <p><strong>Message:</strong> ${ticket.messageText}</p>
+        <small>Submitted: ${new Date(ticket.timestamp).toLocaleString()}</small>
+        <button onclick="deleteTicket('${key}')">Delete</button>
+      `;
 
-      ticketsDiv.innerHTML = "";
-      sorted.forEach(ticket => {
-        const div = document.createElement('div');
-        div.className = 'ticket';
-        div.innerHTML = `
-          <h3>${ticket.issueTitle}</h3>
-          <p><strong>Name:</strong> ${ticket.fullName}</p>
-          <p><strong>Phone:</strong> ${ticket.phone}</p>
-          <p><strong>Email:</strong> ${ticket.email}</p>
-          <p><strong>Message:</strong><br>${ticket.messageText}</p>
-          <small><strong>Submitted:</strong> ${new Date(ticket.timestamp).toLocaleString()}</small>
-          <button onclick="deleteTicket('${ticket.key}')">Delete</button>
-        `;
-        ticketsDiv.appendChild(div);
-      });
+      ticketList.prepend(div);
     }
 
     function deleteTicket(key) {
       support.get(key).put(null, ack => {
         if (!ack.err) {
-          allTickets = allTickets.filter(t => t.key !== key);
-          renderTickets();
+          const el = document.getElementById(key);
+          if (el) el.remove();
+          seen.delete(key);
+          alert("Ticket deleted globally.");
+        } else {
+          alert("Failed to delete ticket.");
         }
       });
     }
 
-    support.map().once((data, key) => {
-      if (!data) return;
-      allTickets.push({ ...data, key });
-      renderTickets();
+    support.map().on((data, key) => {
+      if (!data || data === null) {
+        const el = document.getElementById(key);
+        if (el) el.remove();
+        seen.delete(key);
+        return;
+      }
+      renderTicket(data, key);
     });
-
-    searchBox.addEventListener('input', renderTickets);
-    sortSelect.addEventListener('change', renderTickets);
   </script>
-
 </body>
-  </html>
+</html>
