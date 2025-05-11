@@ -52,12 +52,23 @@
       <button type="submit">Delete Account</button>
     </form>
 
+   <!-- CHANGE PASSWORD -->
+    <form id="changeForm" style="display:none;">
+      <h2>Change Password</h2>
+      <input id="changeUsername" type="text" placeholder="Username" required />
+      <input id="changeEmail" type="email" placeholder="Registered Email" required />
+      <input id="changeOldPassword" type="password" placeholder="Old Password" required />
+      <input id="changeNewPassword" type="password" placeholder="New Password" required />
+      <button type="submit">Change Password</button>
+    </form>
+    
     <!-- Switch Forms -->
     <div class="form-switch">
       <button onclick="switchForm('login')">Login</button>
       <button onclick="switchForm('signup')">Sign Up</button>
       <button onclick="switchForm('recover')">Recover Password</button>
       <button onclick="switchForm('delete')">Delete Account</button>
+<button onclick="switchForm('change')">Change Password</button>    
     </div>
 
     <p class="admin-link">Admin? <a href="admin-login.html">Login here</a></p>
