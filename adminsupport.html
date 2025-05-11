@@ -2,42 +2,149 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Support Panel</title>
+  <title>Admin Support Panel - MACX</title>
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    h2 { text-align: center; }
-    .ticket { border: 1px solid #ccc; margin: 10px 0; padding: 10px; border-radius: 5px; }
-    .ticket h3 { margin: 0 0 5px; }
-    .ticket p { margin: 5px 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 20px auto;
+      flex-wrap: wrap;
+    }
+    input, select {
+      padding: 10px;
+      font-size: 14px;
+      width: 250px;
+      max-width: 90vw;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #tickets {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .ticket {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    .ticket h3 {
+      margin-top: 0;
+      color: #222;
+    }
+    .ticket p {
+      margin: 5px 0;
+      color: #444;
+    }
+    .ticket small {
+      display: block;
+      margin-top: 10px;
+      color: #666;
+    }
+    .ticket button {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .ticket button:hover {
+      background-color: #c0392b;
+    }
   </style>
 </head>
 <body>
 
-  <h2>All Support Requests</h2>
+  <h2>Admin Support Panel</h2>
+
+  <div id="controls">
+    <input type="text" id="searchBox" placeholder="Search by name, email, or title">
+    <select id="sortSelect">
+      <option value="newest">Sort by Newest</option>
+      <option value="oldest">Sort by Oldest</option>
+    </select>
+  </div>
+
   <div id="tickets"></div>
 
   <script>
     const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
     const support = gun.get('macx_support');
     const ticketsDiv = document.getElementById('tickets');
+    const searchBox = document.getElementById('searchBox');
+    const sortSelect = document.getElementById('sortSelect');
+
+    let allTickets = [];
+
+    function renderTickets() {
+      let filter = searchBox.value.toLowerCase();
+      let sorted = allTickets
+        .filter(t => 
+          t.fullName.toLowerCase().includes(filter) || 
+          t.email.toLowerCase().includes(filter) || 
+          t.issueTitle.toLowerCase().includes(filter)
+        );
+
+      if (sortSelect.value === "newest") {
+        sorted.sort((a, b) => b.timestamp - a.timestamp);
+      } else {
+        sorted.sort((a, b) => a.timestamp - b.timestamp);
+      }
+
+      ticketsDiv.innerHTML = "";
+      sorted.forEach(ticket => {
+        const div = document.createElement('div');
+        div.className = 'ticket';
+        div.innerHTML = `
+          <h3>${ticket.issueTitle}</h3>
+          <p><strong>Name:</strong> ${ticket.fullName}</p>
+          <p><strong>Phone:</strong> ${ticket.phone}</p>
+          <p><strong>Email:</strong> ${ticket.email}</p>
+          <p><strong>Message:</strong><br>${ticket.messageText}</p>
+          <small><strong>Submitted:</strong> ${new Date(ticket.timestamp).toLocaleString()}</small>
+          <button onclick="deleteTicket('${ticket.key}')">Delete</button>
+        `;
+        ticketsDiv.appendChild(div);
+      });
+    }
+
+    function deleteTicket(key) {
+      support.get(key).put(null, ack => {
+        if (!ack.err) {
+          allTickets = allTickets.filter(t => t.key !== key);
+          renderTickets();
+        }
+      });
+    }
 
     support.map().once((data, key) => {
       if (!data) return;
-
-      const div = document.createElement('div');
-      div.className = 'ticket';
-      div.innerHTML = `
-        <h3>${data.issueTitle}</h3>
-        <p><strong>Name:</strong> ${data.fullName}</p>
-        <p><strong>Phone:</strong> ${data.phone}</p>
-        <p><strong>Email:</strong> ${data.email}</p>
-        <p><strong>Message:</strong><br>${data.messageText}</p>
-        <small><strong>Submitted:</strong> ${new Date(data.timestamp).toLocaleString()}</small>
-      `;
-      ticketsDiv.appendChild(div);
+      allTickets.push({ ...data, key });
+      renderTickets();
     });
+
+    searchBox.addEventListener('input', renderTickets);
+    sortSelect.addEventListener('change', renderTickets);
   </script>
 
 </body>
-</html>
+  </html>
