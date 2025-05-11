@@ -1,123 +1,119 @@
+// Connect to GUN
 const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
 const users = gun.get('macx_users');
-const emails = gun.get('macx_emails');
 
-// Show feedback
-function showMessage(msg, type = 'error') {
-  const msgBox = document.getElementById('messageBox');
-  if (msgBox) {
-    msgBox.innerText = msg;
-    msgBox.style.color = type === 'success' ? 'green' : 'red';
-    msgBox.style.display = 'block';
-  } else {
-    alert(msg);
-  }
+// Forms
+const signupForm = document.getElementById('signupForm');
+const loginForm = document.getElementById('loginForm');
+const recoverForm = document.getElementById('recoverForm');
+const deleteForm = document.getElementById('deleteForm');
+
+// Utility: show message
+function showMessage(message, success = false) {
+  const msgBox = document.getElementById('message');
+  msgBox.textContent = message;
+  msgBox.style.color = success ? 'green' : 'red';
+  setTimeout(() => { msgBox.textContent = ''; }, 5000);
 }
 
-// SIGNUP
-document.getElementById('signupForm')?.addEventListener('submit', (e) => {
+// Utility: check if logged in
+function checkLogin() {
+  const username = localStorage.getItem('macx_loggedInUser');
+  if (username) {
+    window.location.href = "home.html";
+  }
+}
+checkLogin();
+
+// SIGN UP
+signupForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const username = document.getElementById('signupUsername').value.trim();
-  const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+  const email = document.getElementById('signupEmail').value.trim();
   const password = document.getElementById('signupPassword').value.trim();
 
-  if (!username || !email || !password) {
-    return showMessage('All signup fields are required.');
-  }
+  if (!username || !email || !password) return showMessage("All signup fields required");
 
   users.get(username).once((data) => {
-    if (data) return showMessage('Username already taken.');
+    if (data) return showMessage("Username already exists");
 
-    emails.get(email).once((used) => {
-      if (used) return showMessage('Email already in use. Try logging in or use a new email.');
-
-      users.get(username).put({ username, email, password }, (ack) => {
-        if (ack.err) return showMessage('Signup failed. Try again later.');
-        emails.get(email).put(username); // Mark email as used
-        localStorage.setItem('macx_loggedInUser', username);
-        showMessage('Signup successful!', 'success');
-        setTimeout(() => (window.location.href = 'home.html'), 1000);
-      });
+    // Live email check
+    let duplicateFound = false;
+    users.map().once((user) => {
+      if (user?.email === email) {
+        duplicateFound = true;
+        showMessage("Email already in use");
+      }
     });
+
+    setTimeout(() => {
+      if (duplicateFound) return;
+      users.get(username).put({ username, email, password }, (ack) => {
+        if (ack.err) return showMessage("Signup failed");
+        showMessage("Signup successful!", true);
+      });
+    }, 1000); // Delay to let GUN scan users
   });
 });
 
 // LOGIN
-document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+loginForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value.trim();
 
-  if (!username || !password) return showMessage('Login fields cannot be empty.');
+  if (!username || !password) return showMessage("Login fields required");
 
   users.get(username).once((data) => {
-    if (!data) return showMessage('User not found.');
-    if (data.password !== password) return showMessage('Incorrect password.');
+    if (!data) return showMessage("Account does not exist");
+    if (data.password !== password) return showMessage("Incorrect password");
+
     localStorage.setItem('macx_loggedInUser', username);
-    showMessage('Login successful!', 'success');
-    setTimeout(() => (window.location.href = 'home.html'), 1000);
+    showMessage("Login successful!", true);
+    setTimeout(() => window.location.href = "home.html", 1500);
   });
 });
 
-// RECOVER
-document.getElementById('recoverForm')?.addEventListener('submit', (e) => {
+// RECOVER PASSWORD
+recoverForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const username = document.getElementById('recoverUsername').value.trim();
-  const email = document.getElementById('recoverEmail').value.trim().toLowerCase();
+  const email = document.getElementById('recoverEmail').value.trim();
 
-  if (!username || !email) return showMessage('Recovery fields required.');
+  if (!username || !email) return showMessage("Recovery fields required");
 
   users.get(username).once((data) => {
-    if (!data) return showMessage('No such user.');
-    if (data.email !== email) return showMessage('Email does not match our records.');
-    showMessage(`Recovered password: ${data.password}`, 'success');
+    if (!data) return showMessage("Username not found");
+    if (data.email !== email) return showMessage("Email does not match");
+    showMessage(`Recovered Password: ${data.password}`, true);
   });
 });
 
-// DELETE
-document.getElementById('deleteAccountForm')?.addEventListener('submit', (e) => {
+// DELETE ACCOUNT
+deleteForm?.addEventListener('submit', (e) => {
   e.preventDefault();
   const username = document.getElementById('deleteUsername').value.trim();
-  const email = document.getElementById('deleteEmail').value.trim().toLowerCase();
+  const email = document.getElementById('deleteEmail').value.trim();
   const password = document.getElementById('deletePassword').value.trim();
-  const confirmUser = document.getElementById('deleteConfirmUsername').value.trim();
-  const confirmText = document.getElementById('deleteConfirmText').value.trim();
+  const confirm1 = document.getElementById('confirmDelete1').checked;
+  const confirm2 = document.getElementById('confirmDelete2').checked;
+  const confirm3 = document.getElementById('confirmDelete3').checked;
 
-  if (!username || !email || !password || !confirmUser || !confirmText) {
-    return showMessage('All delete fields must be filled.');
+  if (!username || !email || !password || !confirm1 || !confirm2 || !confirm3) {
+    return showMessage("All fields and confirmations required");
   }
-
-  if (username !== confirmUser) return showMessage('Username confirmation does not match.');
-  if (confirmText !== 'DELETE ACCOUNT') return showMessage('You must type DELETE ACCOUNT to confirm.');
 
   users.get(username).once((data) => {
-    if (!data) return showMessage('User not found.');
+    if (!data) return showMessage("Account does not exist");
     if (data.email !== email || data.password !== password) {
-      return showMessage('Invalid credentials.');
+      return showMessage("Credentials do not match");
     }
 
-    users.get(username).put(null); // remove user
-    emails.get(email).put(null);   // free the email
-    localStorage.removeItem('macx_loggedInUser');
-    showMessage('Account permanently deleted.', 'success');
-    setTimeout(() => (window.location.href = 'index.html'), 2000);
+    // Delete user data
+    users.get(username).put(null);
+    showMessage("Account deleted permanently", true);
+    if (localStorage.getItem('macx_loggedInUser') === username) {
+      localStorage.removeItem('macx_loggedInUser');
+    }
   });
 });
-
-// AUTO-LOGIN on page load
-window.addEventListener('load', () => {
-  const user = localStorage.getItem('macx_loggedInUser');
-  if (user) {
-    const box = document.getElementById('messageBox');
-    if (box) {
-      box.innerText = `Welcome back, ${user}`;
-      box.style.color = 'green';
-    }
-  }
-});
-
-// LOGOUT
-function logout() {
-  localStorage.removeItem('macx_loggedInUser');
-  window.location.href = 'index.html';
-}
