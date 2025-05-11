@@ -1,68 +1,57 @@
-// Connect to a public persistent GUN relay
-const gun = Gun(['https://gunjs.herokuapp.com/gun']);
+// Connect to GUN
+const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
 const users = gun.get('macx_users');
 
-// Elements
-const userTable = document.getElementById('userTableBody');
+// DOM elements
+const userTableBody = document.getElementById('userTableBody');
 const searchInput = document.getElementById('searchInput');
 
-// Store user data in memory
-const userData = {};
+// Render user accounts
+function renderUsers(filter = "") {
+  userTableBody.innerHTML = "";
 
-// Real-time listener for all users
-users.map().on((data, username) => {
-  if (!data || data.deleted || !username) return;
-  userData[username] = data;
-  renderUsers();
-});
+  users.map().once((data, key) => {
+    if (!data || data.deleted || !data.username) return;
 
-// Render users based on search
-function renderUsers() {
-  const search = searchInput.value.trim().toLowerCase();
-  userTable.innerHTML = '';
+    if (filter && !key.toLowerCase().includes(filter.toLowerCase())) return;
 
-  Object.entries(userData).forEach(([username, data]) => {
-    if (!username.toLowerCase().includes(search)) return;
-
-    const row = document.createElement('tr');
-    row.innerHTML = `
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
       <td>${data.username}</td>
       <td>${data.email}</td>
       <td>${data.password}</td>
-      <td><button onclick="confirmDelete('${username}')">Delete</button></td>
+      <td><button onclick="confirmDelete('${key}')">Delete</button></td>
     `;
-    userTable.appendChild(row);
+    userTableBody.appendChild(tr);
   });
 }
 
-// Search input listener
-searchInput.addEventListener('input', renderUsers);
+// Search
+searchInput.addEventListener('input', (e) => {
+  renderUsers(e.target.value.trim());
+});
 
-// Confirm delete with 3 confirmations
-function confirmDelete(username) {
-  const confirmations = [
-    "Are you sure you want to delete this account?",
-    "This action is permanent. Proceed?",
-    "Final confirmation: Delete the account?"
-  ];
+// Confirm + Delete logic
+window.confirmDelete = function (username) {
+  const sure = confirm(`Are you sure to delete "${username}" account?`);
+  if (!sure) return;
 
-  let i = 0;
-  function nextConfirm() {
-    if (i < confirmations.length) {
-      if (confirm(confirmations[i++])) {
-        nextConfirm();
-      }
+  const sure2 = confirm(`Do you want to permanently delete "${username}" from all devices?`);
+  if (!sure2) return;
+
+  const sure3 = confirm(`Final confirmation to delete "${username}". This cannot be undone.`);
+  if (!sure3) return;
+
+  // Mark as deleted globally
+  users.get(username).put({ deleted: true, username: null, email: null, password: null }, (ack) => {
+    if (ack.err) {
+      alert("Error deleting user. Try again.");
     } else {
-      users.get(username).put({ deleted: true }, (ack) => {
-        if (ack.err) {
-          alert("Failed to delete user.");
-        } else {
-          delete userData[username];
-          renderUsers();
-          alert("User deleted permanently.");
-        }
-      });
+      alert("User deleted permanently.");
+      renderUsers(searchInput.value.trim());
     }
-  }
-  nextConfirm();
-}
+  });
+};
+
+// Initial render
+renderUsers();
