@@ -75,13 +75,17 @@
   </div>
 
   <script>
-    function switchForm(form) {
-      document.getElementById('loginForm').style.display = 'none';
-      document.getElementById('signupForm').style.display = 'none';
-      document.getElementById('recoverForm').style.display = 'none';
-      document.getElementById('deleteForm').style.display = 'none';
-      document.getElementById(form + 'Form').style.display = 'block';
-    }
+    
+  function switchForm(form) {
+    const forms = ['login', 'signup', 'recover', 'delete', 'change'];
+    forms.forEach(f => {
+      const el = document.getElementById(f + 'Form');
+      if (el) el.style.display = 'none';
+    });
+    const target = document.getElementById(form + 'Form');
+    if (target) target.style.display = 'block';
+  }
+
   </script>
 </body>
 </html>
