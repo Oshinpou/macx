@@ -5,6 +5,7 @@ const signupForm = document.getElementById('signupForm');
 const loginForm = document.getElementById('loginForm');
 const recoverForm = document.getElementById('recoverForm');
 
+// Utility: Show message
 function showMessage(message, success = false) {
   const msg = document.createElement('p');
   msg.textContent = message;
@@ -14,19 +15,24 @@ function showMessage(message, success = false) {
   setTimeout(() => msg.remove(), 4000);
 }
 
-// PROMISE-based email check
+// Async function to check if email is already used
 function isEmailUsed(email) {
   return new Promise((resolve) => {
     let found = false;
+
+    // Iterate over all users to find if the email already exists
     users.map().once((user) => {
-      if (user && user.email === email && !found) {
+      // If email already exists, return true
+      if (user && user.email === email) {
         found = true;
         resolve(true);
       }
     });
+
+    // If no email found, resolve false
     setTimeout(() => {
       if (!found) resolve(false);
-    }, 1500); // Wait for GUN to finish mapping
+    }, 1500); // Add timeout for waiting for map() to complete
   });
 }
 
@@ -34,18 +40,24 @@ function isEmailUsed(email) {
 if (signupForm) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const username = document.getElementById('signupUsername').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value.trim();
 
     if (!username || !email || !password) return showMessage("All signup fields required");
 
+    // Check if the username exists first
     users.get(username).once(async (data) => {
-      if (data && data.username) return showMessage("Username already exists");
+      if (data && data.username) {
+        return showMessage("Username already exists");
+      }
 
+      // Check for email duplication using the async function
       const emailTaken = await isEmailUsed(email);
       if (emailTaken) return showMessage("Email already used");
 
+      // If no duplication, create the user
       users.get(username).put({ username, email, password }, (ack) => {
         if (ack.err) return showMessage("Signup failed, try again");
         showMessage("Signup successful!", true);
@@ -108,4 +120,4 @@ if (window.location.pathname.includes("home.html")) {
     localStorage.removeItem('macx_loggedInUser');
     window.location.href = "index.html";
   });
-                             }
+}
