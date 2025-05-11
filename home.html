@@ -6,51 +6,20 @@
   <title>MACX Home</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script defer src="home.js"></script>
 </head>
 <body>
   <div class="container">
-    <div id="authContent" style="display: none;">
+    <div id="notLoggedIn" style="display: none;">
+      <h2>You are not logged in.</h2>
+      <button onclick="window.location.href='index.html'">Login First</button>
+    </div>
+
+    <div id="loggedInSection" style="display: none;">
       <h1 id="userDisplay">Welcome, User</h1>
       <button id="logoutBtn">Logout</button>
       <p>You are now logged in. User-only content can go here.</p>
     </div>
-
-    <div id="loginPrompt" style="display: none;">
-      <h2>You are not logged in.</h2>
-      <p>Please log in to access your account.</p>
-      <button onclick="window.location.href='index.html'">Login</button>
-    </div>
   </div>
-
-  <script>
-    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-    const users = gun.get('macx_users');
-    const username = localStorage.getItem('macx_loggedInUser');
-
-    const authContent = document.getElementById('authContent');
-    const loginPrompt = document.getElementById('loginPrompt');
-    const userDisplay = document.getElementById('userDisplay');
-    const logoutBtn = document.getElementById('logoutBtn');
-
-    if (username) {
-      users.get(username).once(data => {
-        if (data) {
-          userDisplay.textContent = `Welcome, ${data.username}!`;
-          authContent.style.display = 'block';
-        } else {
-          // No user found in DB
-          localStorage.removeItem('macx_loggedInUser');
-          loginPrompt.style.display = 'block';
-        }
-      });
-    } else {
-      loginPrompt.style.display = 'block';
-    }
-
-    logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('macx_loggedInUser');
-      location.reload(); // Or redirect to login
-    });
-  </script>
 </body>
 </html>
