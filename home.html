@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MACX Cosmetics - Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to MACX Cosmetics</h1>
+    <p id="welcomeUser">Loading user info...</p>
+    <button id="logoutBtn">Logout</button>
+    <!-- Placeholder for future user data -->
+    <div id="userData">
+      <h3>Your Dashboard (Coming Soon)</h3>
+    </div>
+  </div>
+
+  <script>
+    const welcomeUser = document.getElementById("welcomeUser");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    const loggedInUser = localStorage.getItem("macx_loggedInUser");
+
+    if (!loggedInUser) {
+      welcomeUser.textContent = "You are not logged in.";
+      logoutBtn.style.display = "none";
+      setTimeout(() => window.location.href = "auth.html", 1500);
+    } else {
+      welcomeUser.textContent = `Hello, ${loggedInUser}`;
+    }
+
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("macx_loggedInUser");
+      alert("Logged out successfully!");
+      window.location.href = "auth.html";
+    });
+  </script>
+</body>
+</html>
