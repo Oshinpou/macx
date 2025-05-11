@@ -12,40 +12,32 @@
   <div class="container">
     <h1 class="title">Welcome to MACX Cosmetics</h1><div class="message" id="message"></div>
 
-<!-- Login Form -->
-<form id="loginForm" class="auth-form">
-  <h2>Login</h2>
-  <input type="text" placeholder="Username" id="loginUsername" required>
-  <input type="password" placeholder="Password" id="loginPassword" required>
+<form id="loginForm">
+  <input id="loginUsername" />
+  <input id="loginPassword" />
   <button type="submit">Login</button>
 </form>
-
-<!-- Signup Form -->
-<form id="signupForm" class="auth-form">
-  <h2>Sign Up</h2>
-  <input type="text" placeholder="Username" id="signupUsername" required>
-  <input type="email" placeholder="Email" id="signupEmail" required>
-  <input type="password" placeholder="Password" id="signupPassword" required>
+    
+    <form id="signupForm">
+  <input id="signupUsername" />
+  <input id="signupEmail" />
+  <input id="signupPassword" />
   <button type="submit">Sign Up</button>
 </form>
 
-<!-- Recover Password Form -->
-<form id="recoverForm" class="auth-form">
-  <h2>Recover Password</h2>
-  <input type="text" placeholder="Username" id="recoverUsername" required>
-  <input type="email" placeholder="Email" id="recoverEmail" required>
+
+<form id="recoverForm">
+  <input id="recoverUsername" />
+  <input id="recoverEmail" />
   <button type="submit">Recover</button>
-  <p id="recoveredPassword"></p>
 </form>
 
-<!-- Delete Account Form -->
-<form id="deleteAccountForm" class="auth-form">
-  <h2>Delete Account</h2>
-  <input type="text" placeholder="Username" id="deleteUsername" required>
-  <input type="email" placeholder="Email" id="deleteEmail" required>
-  <input type="password" placeholder="Password" id="deletePassword" required>
-  <input type="text" placeholder="Confirm Username" id="deleteConfirmUsername" required>
-  <input type="text" placeholder="Type 'DELETE ACCOUNT' to confirm" id="deleteConfirmText" required>
+<form id="deleteAccountForm">
+  <input id="deleteUsername" />
+  <input id="deleteEmail" />
+  <input id="deletePassword" />
+  <input id="deleteConfirmUsername" />
+  <input id="deleteConfirmText" placeholder="Type DELETE ACCOUNT" />
   <button type="submit">Delete Account</button>
 </form>
     
