@@ -84,26 +84,26 @@
       reader.readAsDataURL(file);
     }
 
-    function displayImages() {
-      document.getElementById('imagesContainer').innerHTML = '';
-      db.allDocs({ include_docs: true, attachments: true }).then(result => {
-        result.rows.forEach(row => {
-          const doc = row.doc;
-          for (let name in doc._attachments) {
-            const att = doc._attachments[name];
-            const imgUrl = `data:${att.content_type};base64,${att.data}`;
-            const div = document.createElement('div');
-            div.className = 'image-box';
-            div.innerHTML = `
-              <img src="${imgUrl}" alt="${name}" />
-              <div class="image-url">${imgUrl}</div>
-              <button onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
-            `;
-            document.getElementById('imagesContainer').appendChild(div);
-          }
-        });
-      });
-    }
+     
+function displayImages() {
+  document.getElementById('imagesContainer').innerHTML = '';
+  db.allDocs({ include_docs: true, attachments: true }).then(result => {
+    result.rows.forEach(row => {
+      const doc = row.doc;
+      for (let name in doc._attachments) {
+        const imgUrl = `https://your-couchdb-server.com/macx_images/${doc._id}/${encodeURIComponent(name)}`;
+        const div = document.createElement('div');
+        div.className = 'image-box';
+        div.innerHTML = `
+          <img src="${imgUrl}" alt="${name}" />
+          <div class="image-url">${imgUrl}</div>
+          <button onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
+        `;
+        document.getElementById('imagesContainer').appendChild(div);
+      }
+    });
+  });
+}
 
     function deleteImage(id, rev) {
       db.remove(id, rev).then(() => {
