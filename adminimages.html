@@ -85,8 +85,43 @@
     }
 
 function displayImages() {
-  const container = document.getElementById('imagesContainer');
-  container.innerHTML = '';
+  document.getElementById('imagesContainer').innerHTML = ''; // Clear the container
+  db.allDocs({ include_docs: true, attachments: true }).then(result => {
+    result.rows.forEach(row => {
+      const doc = row.doc;
+      for (let name in doc._attachments) {
+        const att = doc._attachments[name];
+        const imgUrl = `data:${att.content_type};base64,${att.data}`;
+        
+        // Create the image container
+        const div = document.createElement('div');
+        div.className = 'image-box';
+        
+        // Add the image, URL, and delete button
+        div.innerHTML = `
+          <img src="${imgUrl}" alt="${name}" />
+          <div class="image-url">
+            <input type="text" value="${imgUrl}" readonly id="imageUrlInput-${doc._id}" />
+            <button onclick="copyUrl('imageUrlInput-${doc._id}')">Copy URL</button>
+          </div>
+          <button onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
+        `;
+        
+        // Append the created div to the container
+        document.getElementById('imagesContainer').appendChild(div);
+      }
+    });
+  });
+}
+
+// Function to copy the URL to clipboard
+function copyUrl(inputId) {
+  const copyText = document.getElementById(inputId);
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); // For mobile devices
+  document.execCommand('copy');
+  alert("Copied the URL: " + copyText.value);
+}
 
   // Create modal if not exists
   if (!document.getElementById('imageModal')) {
