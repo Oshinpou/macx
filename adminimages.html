@@ -169,6 +169,19 @@ function displayImages() {
           document.getElementById('imageModal').style.display = 'flex';
         };
 
+        // Truncated URL display
+        const urlDiv = document.createElement('div');
+        const truncatedUrl = imgUrl.length > 50 ? imgUrl.slice(0, 50) + '...' : imgUrl;
+        urlDiv.textContent = `URL: ${truncatedUrl}`;
+        Object.assign(urlDiv.style, {
+          fontSize: '10px',
+          color: '#888',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          wordWrap: 'break-word',
+        });
+
         // Delete button
         const button = document.createElement('button');
         button.textContent = 'Delete';
@@ -184,15 +197,17 @@ function displayImages() {
 
         // Append elements
         div.appendChild(img);
+        div.appendChild(urlDiv); // Add truncated URL
         div.appendChild(button);
         container.appendChild(div);
       }
     });
   });
 }
+
     
-        
-       function deleteImage(id, rev) {
+
+   function deleteImage(id, rev) {
       db.remove(id, rev).then(() => {
         alert('Image deleted.');
         displayImages();
