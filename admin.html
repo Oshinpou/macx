@@ -83,16 +83,26 @@ function searchEmail() {
     return;
   }
 
-  const tableRows = document.querySelectorAll("#userTableBody tr");
+  const tableBody = document.getElementById("userTableBody");
+  const tableRows = tableBody.querySelectorAll("tr");
   let found = false;
 
+  // Reset all rows
   tableRows.forEach(row => {
-    row.style.backgroundColor = ""; // Reset background
-    const emailCell = row.cells[1]; // Second column is Email
+    row.style.backgroundColor = "";
+  });
 
+  tableRows.forEach(row => {
+    const emailCell = row.cells[1]; // 2nd cell = email
     if (emailCell && emailCell.textContent.trim().toLowerCase() === input) {
       row.style.backgroundColor = "lightyellow";
-      row.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Move matched row to top of tbody
+      tableBody.insertBefore(row, tableBody.firstChild);
+
+      // Scroll table to top
+      window.scrollTo({ top: tableBody.offsetTop - 100, behavior: "smooth" });
+
       found = true;
     }
   });
