@@ -75,41 +75,32 @@
     <tbody id="userTableBody"></tbody>
   </table>
   
-    <script>
+<script>
 function searchEmail() {
-    const input = document.getElementById("searchInput2").value.trim();
-    if (!input) return alert("Please enter an email address.");
+  const input = document.getElementById("searchInput2").value.trim().toLowerCase();
+  if (!input) {
+    alert("Please enter an email address.");
+    return;
+  }
 
-    const regex = new RegExp(input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "i"); // escape special characters
-    const bodyTextNodes = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const tableRows = document.querySelectorAll("#userTableBody tr");
+  let found = false;
 
-    let found = false;
+  tableRows.forEach(row => {
+    row.style.backgroundColor = ""; // Reset background
+    const emailCell = row.cells[1]; // Second column is Email
 
-    while (bodyTextNodes.nextNode()) {
-        const node = bodyTextNodes.currentNode;
-        if (regex.test(node.textContent)) {
-            const span = document.createElement("span");
-            span.style.backgroundColor = "yellow";
-            span.style.fontWeight = "bold";
-            span.textContent = node.textContent;
-
-            const parent = node.parentNode;
-            const clone = node.cloneNode();
-            span.innerHTML = node.textContent.replace(regex, `<mark>$&</mark>`);
-
-            parent.replaceChild(span, node);
-            span.scrollIntoView({ behavior: "smooth", block: "center" });
-
-            found = true;
-            break;
-        }
+    if (emailCell && emailCell.textContent.trim().toLowerCase() === input) {
+      row.style.backgroundColor = "lightyellow";
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      found = true;
     }
+  });
 
-    if (!found) {
-        alert("Email not found on the page.");
-    }
+  if (!found) {
+    alert("No account found with this email.");
+  }
 }
-
-  </script>
+</script>
 </body>
 </html>
