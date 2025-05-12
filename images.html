@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Global Image Uploader</title>
+  <title>Global Image Upload with Token</title>
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    body { font-family: sans-serif; padding: 20px; background: #f8f8f8; }
     .img-box { background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
     .img-box img { max-width: 100%; margin-top: 10px; }
     button { padding: 6px 12px; margin-top: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
     button:hover { background: #0056b3; }
+    #errorLog { color: red; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -18,8 +19,9 @@
 <h2>Upload Image & Generate Token</h2>
 <input type="file" id="fileInput" accept="image/*">
 <button id="uploadBtn">Upload & Generate Token</button>
+<div id="errorLog"></div>
 
-<h3>Uploaded Images (Global)</h3>
+<h3>Uploaded Images (Global Sync)</h3>
 <div id="uploadedImages"></div>
 
 <h3>View Image by Token</h3>
@@ -31,63 +33,70 @@
   const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
   const fileInput = document.getElementById("fileInput");
   const uploadedImages = document.getElementById("uploadedImages");
+  const errorLog = document.getElementById("errorLog");
 
   document.getElementById("uploadBtn").onclick = () => {
+    errorLog.textContent = ""; // clear previous errors
     const file = fileInput.files[0];
-    if (!file) return alert("Please choose an image.");
+    if (!file) {
+      errorLog.textContent = "Error: No image selected.";
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      errorLog.textContent = "Error: Selected file is not an image.";
+      return;
+    }
 
     const reader = new FileReader();
 
     reader.onload = () => {
-      const base64 = reader.result;
-      const token = nanoid.nanoid(8);
-      console.log("Uploading image with token:", token);
+      try {
+        const base64 = reader.result;
+        const token = nanoid.nanoid(8);
+        console.log("Uploading image with token:", token);
 
-      gun.get('images').get(token).put({ base64 }, ack => {
-        if (ack.err) {
-          console.error("Upload failed:", ack.err);
-          alert("Image upload failed!");
-        } else {
-          console.log("Upload successful:", token);
-          const link = `${location.origin + location.pathname}?token=${token}`;
-          const box = document.createElement("div");
-          box.className = "img-box";
-          box.innerHTML = `
-            <strong>Token:</strong> ${token}<br>
-            <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
-            <img src="${base64}"><br>
-            <button onclick="deleteImage('${token}', this)">Delete Image</button>
-          `;
-          uploadedImages.prepend(box);
-        }
-      });
+        gun.get('images').get(token).put({ base64 }, ack => {
+          if (ack.err) {
+            console.error("Upload failed:", ack.err);
+            errorLog.textContent = "Error: Failed to store image in GUN network.";
+          } else {
+            console.log("Upload success:", token);
+            showImage(token, base64);
+          }
+        });
+      } catch (err) {
+        console.error("Upload error:", err);
+        errorLog.textContent = "Error: Unexpected issue while uploading image.";
+      }
     };
 
-    reader.onerror = () => {
-      console.error("FileReader failed");
-      alert("Could not read the image.");
+    reader.onerror = (e) => {
+      console.error("FileReader error:", e);
+      errorLog.textContent = "Error: Failed to read the image file.";
     };
 
     reader.readAsDataURL(file);
   };
 
-  // Sync images globally
-  gun.get('images').map().once((data, key) => {
-    if (data && data.base64) {
-      const existing = document.getElementById(`img-${key}`);
-      if (existing) return; // prevent duplicates
+  function showImage(token, base64) {
+    const link = `${location.origin + location.pathname}?token=${token}`;
+    const box = document.createElement("div");
+    box.id = `img-${token}`;
+    box.className = "img-box";
+    box.innerHTML = `
+      <strong>Token:</strong> ${token}<br>
+      <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
+      <img src="${base64}" alt="Uploaded"><br>
+      <button onclick="deleteImage('${token}', this)">Delete Image</button>
+    `;
+    uploadedImages.prepend(box);
+  }
 
-      const link = `${location.origin + location.pathname}?token=${key}`;
-      const box = document.createElement("div");
-      box.id = `img-${key}`;
-      box.className = "img-box";
-      box.innerHTML = `
-        <strong>Token:</strong> ${key}<br>
-        <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
-        <img src="${data.base64}"><br>
-        <button onclick="deleteImage('${key}', this)">Delete Image</button>
-      `;
-      uploadedImages.prepend(box);
+  // Sync existing images globally
+  gun.get('images').map().once((data, key) => {
+    if (data && data.base64 && !document.getElementById(`img-${key}`)) {
+      showImage(key, data.base64);
     }
   });
 
@@ -105,12 +114,15 @@
   }
 
   function deleteImage(token, btn) {
-    if (confirm("Are you sure you want to delete this image?") && confirm("This action cannot be undone. Proceed?")) {
+    if (confirm("Are you sure you want to delete this image?") &&
+        confirm("This action cannot be undone. Confirm delete?")) {
       gun.get('images').get(token).put(null);
-      btn.closest(".img-box").remove();
+      const box = document.getElementById(`img-${token}`);
+      if (box) box.remove();
     }
   }
 
+  // Auto-load if URL token is present
   const urlToken = new URLSearchParams(location.search).get("token");
   if (urlToken) {
     document.getElementById("tokenInput").value = urlToken;
