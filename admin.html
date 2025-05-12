@@ -74,5 +74,42 @@
     </thead>
     <tbody id="userTableBody"></tbody>
   </table>
+  
+    <script>
+function searchEmail() {
+    const input = document.getElementById("searchInput2").value.trim();
+    if (!input) return alert("Please enter an email address.");
+
+    const regex = new RegExp(input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "i"); // escape special characters
+    const bodyTextNodes = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+
+    let found = false;
+
+    while (bodyTextNodes.nextNode()) {
+        const node = bodyTextNodes.currentNode;
+        if (regex.test(node.textContent)) {
+            const span = document.createElement("span");
+            span.style.backgroundColor = "yellow";
+            span.style.fontWeight = "bold";
+            span.textContent = node.textContent;
+
+            const parent = node.parentNode;
+            const clone = node.cloneNode();
+            span.innerHTML = node.textContent.replace(regex, `<mark>$&</mark>`);
+
+            parent.replaceChild(span, node);
+            span.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        alert("Email not found on the page.");
+    }
+}
+
+  </script>
 </body>
 </html>
