@@ -126,7 +126,16 @@ function displayImages() {
 
       for (let name in doc._attachments) {
         const att = doc._attachments[name];
-        const imgUrl = `data:${att.content_type};base64,${att.data}`;
+
+        // Convert base64 to blob URL
+        const byteChars = atob(att.data);
+        const byteNumbers = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) {
+          byteNumbers[i] = byteChars.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: att.content_type });
+        const imgUrl = URL.createObjectURL(blob);
 
         // Image container
         const div = document.createElement('div');
@@ -156,19 +165,9 @@ function displayImages() {
           marginBottom: '6px',
         });
         img.onclick = () => {
-          const modalImg = document.getElementById('modalImg');
-          modalImg.src = imgUrl;
+          document.getElementById('modalImg').src = imgUrl;
           document.getElementById('imageModal').style.display = 'flex';
         };
-
-        // URL text
-        const urlDiv = document.createElement('div');
-        urlDiv.textContent = imgUrl;
-        Object.assign(urlDiv.style, {
-          wordBreak: 'break-all',
-          marginBottom: '8px',
-          color: '#444'
-        });
 
         // Delete button
         const button = document.createElement('button');
@@ -185,7 +184,6 @@ function displayImages() {
 
         // Append elements
         div.appendChild(img);
-        div.appendChild(urlDiv);
         div.appendChild(button);
         container.appendChild(div);
       }
@@ -193,7 +191,8 @@ function displayImages() {
   });
 }
     
-    function deleteImage(id, rev) {
+        
+       function deleteImage(id, rev) {
       db.remove(id, rev).then(() => {
         alert('Image deleted.');
         displayImages();
