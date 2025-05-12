@@ -108,39 +108,8 @@ function searchEmail() {
   }
 }
 
-const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-const users = gun.get('macx_users');
-const tableBody = document.getElementById('userTableBody');
 
-window.addEventListener('DOMContentLoaded', () => {
-  users.map().once((data, key) => {
-    if (!data || !data.username || !data.email || !data.password) return;
 
-    // Parse createdAt correctly
-    const createdAt = data.createdAt ? parseInt(data.createdAt) : Date.now();
-    const istDate = new Date(createdAt).toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata'
-    });
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${data.username}</td>
-      <td>${data.email}</td>
-      <td>${data.password}</td>
-      <td>${istDate}</td>
-      <td><button onclick="deleteUser('${key}')">Delete</button></td>
-    `;
-
-    tableBody.appendChild(tr);
-  });
-});
-
-function deleteUser(username) {
-  if (!confirm(`Delete user "${username}"?`)) return;
-  users.get(username).put(null);
-  alert(`User "${username}" deleted.`);
-  location.reload();
-}
 </script>
 
 </body>
