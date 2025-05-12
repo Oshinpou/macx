@@ -2,116 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Images | MACX</title>
-  <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.1/dist/pouchdb.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Images - MACX</title>
+  <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.0/dist/pouchdb.min.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f5f5f5;
+      font-family: Arial, sans-serif;
+      background: #f8f8f8;
       padding: 20px;
+    }
+    h1 {
       text-align: center;
     }
-    h2 { color: #333; }
     #imageInput {
+      display: block;
       margin: 20px auto;
-      display: block;
     }
-    .image-block {
-      display: inline-block;
-      margin: 15px;
-      border: 1px solid #ccc;
-      padding: 10px;
+    #images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .image-card {
       background: white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      text-align: center;
+      width: 200px;
     }
-    .image-block img {
-      max-height: 100px;
-      display: block;
-      margin-bottom: 5px;
+    .image-card img {
+      max-width: 100%;
+      border-radius: 5px;
     }
-    .url {
+    .url-text {
       font-size: 12px;
-      color: #555;
-      word-break: break-all;
+      word-break: break-word;
+      margin: 5px 0;
     }
-    button {
+    .delete-btn {
+      background: red;
+      color: white;
+      border: none;
       padding: 5px 10px;
-      margin-top: 5px;
+      border-radius: 4px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h2>MACX Admin Image Uploader</h2>
-  <p>Upload compatible image files. Each image gets a short unique URL and is visible across all devices globally.</p>
-  <input type="file" id="imageInput" accept="image/*" />
-  <div id="images"></div>
 
-  <script>
-    // Local PouchDB
-    const db = new PouchDB("macx-admin-images");
+<h1>MACX Admin Image Manager</h1>
+<input type="file" id="imageInput" accept="image/*">
+<p style="text-align:center;">Upload only compatible image files. Every image is stored globally and accessible via unique short URL.</p>
+<div id="images"></div>
 
-    // Optional: Global sync via CouchDB
-    const remote = new PouchDB("https://your-couchdb-url.com/macx-admin-images");
-    db.sync(remote, { live: true, retry: true });
+<script>
+  const db = new PouchDB('macx-images');
+  const remoteDB = new PouchDB('https://YOUR_COUCHDB_URL/macx-images'); // Replace with your CouchDB URL
+  db.sync(remoteDB, { live: true, retry: true });
 
-    // Upload image
-    document.getElementById("imageInput").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+  document.getElementById("imageInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const id = "img_" + Math.random().toString(36).substring(2, 7); // Short ID
-        try {
-          const doc = await db.put({ _id: id, createdAt: new Date().toISOString() });
-          await db.putAttachment(id, file.name, doc.rev, reader.result, file.type);
-          showImages();
-        } catch (err) {
-          console.error("Upload error:", err);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    });
-
-    // Show images
-    async function showImages() {
-      const container = document.getElementById("images");
-      container.innerHTML = "";
-      const result = await db.allDocs({ include_docs: true });
-      for (const row of result.rows) {
-        const id = row.id;
-        const doc = row.doc;
-        const attachments = doc._attachments || {};
-        const name = Object.keys(attachments)[0];
-        if (!name) continue;
-
-        const blob = await db.getAttachment(id, name);
-        const url = URL.createObjectURL(blob);
-
-        const div = document.createElement("div");
-        div.className = "image-block";
-        div.innerHTML = `
-          <img src="${url}" />
-          <div class="url">/img/${id}</div>
-          <button onclick="deleteImage('${id}')">Delete</button>
-        `;
-        container.appendChild(div);
-      }
-    }
-
-    // Delete image
-    async function deleteImage(id) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const id = "img_" + Math.random().toString(36).substring(2, 7);
       try {
-        const doc = await db.get(id);
-        await db.remove(doc);
+        const doc = await db.put({ _id: id, createdAt: new Date().toISOString(), name: file.name, type: file.type });
+        await db.putAttachment(id, file.name, doc.rev, reader.result, file.type);
         showImages();
       } catch (err) {
-        console.error("Delete error:", err);
+        console.error("Upload error:", err);
       }
-    }
+    };
+    reader.readAsArrayBuffer(file);
+  });
 
-    showImages();
-  </script>
+  async function showImages() {
+    const container = document.getElementById("images");
+    container.innerHTML = "";
+    try {
+      const result = await db.allDocs({ include_docs: true });
+      for (const row of result.rows) {
+        const doc = row.doc;
+        const blob = await db.getAttachment(doc._id, doc.name);
+        const url = URL.createObjectURL(blob);
+        const shortURL = `${location.origin}/img/${doc._id}`;
+
+        const card = document.createElement("div");
+        card.className = "image-card";
+        card.innerHTML = `
+          <img src="${url}" alt="${doc.name}">
+          <div class="url-text">${shortURL}</div>
+          <button class="delete-btn" onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
+        `;
+        container.appendChild(card);
+      }
+    } catch (err) {
+      console.error("Show image error:", err);
+    }
+  }
+
+  async function deleteImage(id, rev) {
+    try {
+      await db.remove(id, rev);
+      showImages();
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
+  }
+
+  showImages();
+</script>
+
 </body>
 </html>
