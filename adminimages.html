@@ -5,94 +5,129 @@
   <title>MACX Admin Image Upload</title>
   <script src="https://cdn.jsdelivr.net/npm/pouchdb@7.3.0/dist/pouchdb.min.js"></script>
   <style>
-    body { font-family: Arial; background: #f0f0f0; padding: 20px; }
-    h1 { text-align: center; }
-    #uploadBtn { margin: 10px auto; display: block; }
-    .image-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-    .card {
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      width: 200px;
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      padding: 20px;
       text-align: center;
     }
-    .card img { max-width: 100%; border-radius: 6px; }
-    .card input { width: 100%; font-size: 12px; margin-top: 5px; text-align: center; }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    input[type="file"] {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    .image-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 10px;
+      width: 200px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .card img {
+      max-width: 100%;
+      border-radius: 5px;
+    }
+
+    .card input {
+      width: 100%;
+      font-size: 12px;
+      margin-top: 5px;
+      text-align: center;
+    }
+
     .delete-btn {
       background: crimson;
       color: white;
       border: none;
       padding: 5px 10px;
-      margin-top: 5px;
       border-radius: 5px;
       cursor: pointer;
+      margin-top: 5px;
     }
-    .note { text-align: center; margin-top: 10px; font-size: 14px; color: #444; }
   </style>
 </head>
 <body>
 
-<h1>Admin Image Uploader - MACX</h1>
-<input type="file" id="uploadBtn" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif">
-<p class="note">Compatible: PNG, JPG, JPEG, GIF, WebP. Uploaded image stays forever until deleted. Share or embed via URL.</p>
+  <h1>Admin Image Uploader</h1>
+  <p class="note">Upload PNG, JPG, JPEG, GIF, or WebP. Image URLs work across all devices and sites. Stored until manually deleted.</p>
+  
+  <input type="file" id="uploadBtn" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif">
+  <div class="image-container" id="imageContainer"></div>
 
-<div class="image-container" id="imageContainer"></div>
+  <script>
+    const db = new PouchDB('macx-images');
+    const remote = new PouchDB('https://your-couchdb-url.com/macx-images'); // Replace with your CouchDB URL
+    db.sync(remote, { live: true, retry: true });
 
-<script>
-  const db = new PouchDB('macx-images');
-  const remote = new PouchDB('https://your-couchdb-url.com/macx-images'); // Change to your CouchDB URL
-  db.sync(remote, { live: true, retry: true });
+    const uploadBtn = document.getElementById('uploadBtn');
+    const imageContainer = document.getElementById('imageContainer');
 
-  const uploadBtn = document.getElementById('uploadBtn');
-  const imageContainer = document.getElementById('imageContainer');
-
-  function generateShortId() {
-    return Math.random().toString(36).substring(2, 8); // 6-char ID
-  }
-
-  uploadBtn.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const id = 'img_' + generateShortId();
-      const doc = await db.put({ _id: id, type: file.type, name: file.name });
-      await db.putAttachment(id, file.name, doc.rev, reader.result, file.type);
-      showImages();
-    };
-    reader.readAsArrayBuffer(file);
-  });
-
-  async function showImages() {
-    const allDocs = await db.allDocs({ include_docs: true });
-    imageContainer.innerHTML = '';
-
-    for (const row of allDocs.rows) {
-      const doc = row.doc;
-      const attachment = await db.getAttachment(doc._id, doc.name);
-      const blobUrl = URL.createObjectURL(attachment);
-      const publicUrl = `https://your-couchdb-url.com/macx-images/${doc._id}/${encodeURIComponent(doc.name)}`;
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${blobUrl}" alt="${doc.name}">
-        <input type="text" readonly value="${publicUrl}" onclick="this.select()">
-        <button class="delete-btn" onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
-      `;
-      imageContainer.appendChild(card);
+    function generateShortId() {
+      return Math.random().toString(36).substr(2, 6);
     }
-  }
 
-  async function deleteImage(id, rev) {
-    await db.remove(id, rev);
+    uploadBtn.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const id = 'img_' + generateShortId();
+        const doc = await db.put({ _id: id, type: file.type, name: file.name });
+        await db.putAttachment(id, file.name, doc.rev, reader.result, file.type);
+        showImages();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    async function showImages() {
+      const allDocs = await db.allDocs({ include_docs: true });
+      imageContainer.innerHTML = '';
+
+      for (const row of allDocs.rows) {
+        const doc = row.doc;
+        const attachment = await db.getAttachment(doc._id, doc.name);
+        const blobUrl = URL.createObjectURL(attachment);
+        const publicUrl = `https://your-couchdb-url.com/macx-images/${doc._id}/${encodeURIComponent(doc.name)}`; // Short URL
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${blobUrl}" alt="${doc.name}">
+          <input type="text" readonly value="${publicUrl}" onclick="this.select()">
+          <button class="delete-btn" onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
+        `;
+        imageContainer.appendChild(card);
+      }
+    }
+
+    async function deleteImage(id, rev) {
+      await db.remove(id, rev);
+      showImages();
+    }
+
     showImages();
-  }
-
-  showImages();
-</script>
+  </script>
 
 </body>
 </html>
