@@ -1,117 +1,74 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html lang="en">
 <head>
-  <title>GUN Image Upload with Tokens</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Image Uploader (No Node.js)</title>
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
   <style>
-    body { font-family: Arial, padding: 20px; background: #f5f5f5; }
-    .img-box { background: white; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; }
-    img { max-width: 100%; height: auto; margin-top: 10px; }
+    body { font-family: Arial; padding: 20px; }
+    .img-box { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
+    img { max-width: 100%; height: auto; margin-top: 5px; }
     input[type="file"] { margin-bottom: 10px; }
-    button { margin-top: 10px; padding: 6px 12px; }
   </style>
 </head>
 <body>
+  <h2>Upload Image with Token</h2>
+  <input type="file" id="imageInput" accept="image/*">
+  <button onclick="uploadImage()">Upload Image</button>
+  <div id="uploadedImages"></div>  <script>
+    const gun = Gun();
+    const uploadedImages = document.getElementById('uploadedImages');
 
-<h2>Upload Image & Generate Token</h2>
-<input type="file" id="imageInput" accept="image/*">
-<button onclick="uploadImage()">Upload Image</button>
-<div id="uploadedImages"></div>
+    function uploadImage() {
+      const fileInput = document.getElementById("imageInput");
+      const file = fileInput.files[0];
+      if (!file) return alert("Please select an image to upload.");
 
-<!-- Include GUN.js -->
-<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result;
+        const token = nanoid.nanoid(8);
 
-<script>
-  // Initialize GUN with memory-only (no localStorage or Radisk)
-  const gun = Gun({
-    peers: ['https://gun-manhattan.herokuapp.com/gun'],
-    localStorage: false,
-    radisk: false
-  });
+        gun.get("images").get(token).put({ base64 });
+        renderImage(token, base64);
+      };
+      reader.readAsDataURL(file);
+    }
 
-  const uploadedImages = document.getElementById("uploadedImages");
+    function renderImage(token, base64) {
+      const link = `${location.origin + location.pathname}?token=${token}`;
+      const box = document.createElement("div");
+      box.className = "img-box";
+      box.innerHTML = `
+        <strong>Token:</strong> ${token}<br>
+        <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
+        <img src="${base64}" alt="Uploaded"><br>
+        <button onclick="deleteImage('${token}', this)">Delete Image</button>
+      `;
+      uploadedImages.prepend(box);
+    }
 
-  // Generate a simple token (nanoid-like)
-  function generateToken(length = 8) {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  }
+    function deleteImage(token, button) {
+      if (!confirm("Delete this image?")) return;
+      if (!confirm("Are you absolutely sure?")) return;
 
-  // Upload image to GUN
-  function uploadImage() {
-    const fileInput = document.getElementById("imageInput");
-    const file = fileInput.files[0];
-    if (!file) return alert("Please select an image");
+      gun.get("images").get(token).put(null);
+      button.parentElement.remove();
+    }
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const base64 = e.target.result;
-      const token = generateToken();
-
-      gun.get('images').get(token).put({ base64 }, ack => {
-        if (ack.err) {
-          console.error("Upload error:", ack.err);
-          alert("Upload failed: " + ack.err);
-        } else {
-          alert("Image uploaded with token: " + token);
-          displayImage(token, base64);
-        }
-      });
-    };
-    reader.onerror = function (e) {
-      alert("Error reading file");
-    };
-    reader.readAsDataURL(file);
-  }
-
-  // Display image block
-  function displayImage(token, base64) {
-    const link = `${location.origin + location.pathname}?token=${token}`;
-    const box = document.createElement("div");
-    box.className = "img-box";
-    box.innerHTML = `
-      <strong>Token:</strong> ${token}<br>
-      <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
-      <img src="${base64}" alt="Uploaded"><br>
-      <button onclick="deleteImage('${token}', this)">Delete Image</button>
-    `;
-    uploadedImages.prepend(box);
-  }
-
-  // Delete image
-  function deleteImage(token, btn) {
-    if (confirm("Are you sure to delete this image?")) {
-      gun.get('images').get(token).put(null, ack => {
-        if (ack.err) {
-          alert("Error deleting: " + ack.err);
-        } else {
-          btn.parentElement.remove();
-        }
+    // Load from token in URL if present
+    const urlToken = new URLSearchParams(location.search).get("token");
+    if (urlToken) {
+      gun.get("images").get(urlToken).once(data => {
+        if (data && data.base64) renderImage(urlToken, data.base64);
+        else alert("Image not found or expired.");
       });
     }
-  }
 
-  // Load image by token from URL
-  const params = new URLSearchParams(window.location.search);
-  const tokenParam = params.get('token');
-  if (tokenParam) {
-    gun.get('images').get(tokenParam).once(data => {
-      if (data && data.base64) {
-        displayImage(tokenParam, data.base64);
-      } else {
-        alert("No image found for token: " + tokenParam);
-      }
+    // Load all saved images globally
+    gun.get("images").map().once((data, key) => {
+      if (data && data.base64) renderImage(key, data.base64);
     });
-  }
-
-  // Sync all images globally in real-time
-  gun.get('images').map().once((data, key) => {
-    if (data && data.base64) {
-      // Avoid duplicates
-      if (!document.querySelector(`.img-box[data-token="${key}"]`)) {
-        displayImage(key, data.base64);
-      }
-    }
-  });
-</script>
-</body>
+  </script></body>
 </html>
