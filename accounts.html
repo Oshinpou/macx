@@ -15,32 +15,30 @@
   </div>
 
   <script>
-    const username = localStorage.getItem("macx_loggedInUser");
     const gun = Gun();
-    const infoBox = document.getElementById("accountInfo");
+    const accountInfo = document.getElementById("accountInfo");
     const loginStatus = document.getElementById("loginStatus");
 
-    if (username) {
-      gun.get('users').get(username).once(data => {
-        if (data) {
-          const email = data.email || "Not available";
-          const password = data.password || "Not available";
+    const username = localStorage.getItem("macx_loggedInUser");
 
-          infoBox.innerHTML = `
+    if (username) {
+      gun.get("users").get(username).once(userData => {
+        if (userData && userData.email && userData.password) {
+          accountInfo.innerHTML = `
             <p><strong>Username:</strong> ${username}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Password:</strong> ${password}</p>
+            <p><strong>Email:</strong> ${userData.email}</p>
+            <p><strong>Password:</strong> ${userData.password}</p>
             <button onclick="location.href='index.html'">Recover Deleted Account</button>
             <button onclick="location.href='supportout.html'">Support</button>
           `;
           loginStatus.textContent = "Login Status: Logged In";
         } else {
-          infoBox.innerHTML = "<p>Error fetching account data.</p>";
-          loginStatus.textContent = "Login Status: Logged In";
+          accountInfo.innerHTML = "<p>Error: Account data incomplete or missing.</p>";
+          loginStatus.textContent = "Login Status: Logged In (No data found)";
         }
       });
     } else {
-      infoBox.innerHTML = `
+      accountInfo.innerHTML = `
         <p>You are not logged in.</p>
         <button onclick="location.href='index.html'">Login First</button>
         <button onclick="location.href='supportout.html'">Support</button>
