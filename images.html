@@ -1,80 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Token Image Uploader</title>
+  <title>Image Uploader & Token Viewer</title>
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
-    .image-block { border: 1px solid #ccc; background: #fff; padding: 10px; margin-bottom: 15px; border-radius: 8px; }
-    img { max-width: 100%; height: auto; display: block; margin-bottom: 10px; }
-    button { margin-top: 5px; margin-right: 5px; }
-    .token { font-weight: bold; background: #eee; padding: 4px 6px; border-radius: 5px; display: inline-block; margin-bottom: 6px; }
+    body { font-family: sans-serif; padding: 20px; }
+    img { max-width: 100%; margin-top: 10px; }
+    .img-box { margin: 20px 0; border: 1px solid #ddd; padding: 10px; }
+    input[type="file"] { margin-bottom: 10px; }
+    textarea { width: 100%; height: 50px; }
   </style>
 </head>
 <body>
 
-<h2>Image Upload with Token Generator (GUN.js)</h2>
+<h1>Image Upload + Token Viewer</h1>
 
-<input type="file" id="uploader" accept="image/*"><br><br>
-<div id="images"></div>
+<div id="upload-section">
+  <input type="file" id="fileInput" accept="image/*">
+  <button onclick="uploadImage()">Upload & Generate Token</button>
+</div>
+
+<div id="uploadedImages"></div>
+
+<hr>
+
+<h2>View Image by Token</h2>
+<input type="text" id="tokenInput" placeholder="Enter token (e.g., j22vz67p)">
+<button onclick="loadImageByToken()">View Image</button>
+
+<div id="viewer"></div>
 
 <script>
-  const gun = Gun(); // Start Gun (no peer needed for local memory)
+  const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+  const fileInput = document.getElementById("fileInput");
+  const uploadedImages = document.getElementById("uploadedImages");
 
-  const uploader = document.getElementById('uploader');
-  const imagesDiv = document.getElementById('images');
-
-  uploader.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
+  function uploadImage() {
+    const file = fileInput.files[0];
+    if (!file) return alert("Please select an image.");
     const reader = new FileReader();
+
     reader.onload = () => {
       const base64 = reader.result;
-      const token = generateToken();
+      const token = nanoid.nanoid(8);
       gun.get('images').get(token).put({ base64 });
-      alert("Image uploaded! Token: " + token);
-    };
-    reader.readAsDataURL(file);
-  };
 
-  function generateToken(length = 8) {
-    return Math.random().toString(36).substring(2, 2 + length);
+      const link = `${location.origin + location.pathname}?token=${token}`;
+      const box = document.createElement("div");
+      box.className = "img-box";
+      box.innerHTML = `
+        <strong>Token:</strong> ${token}<br>
+        <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
+        <img src="${base64}" alt="Uploaded"><br>
+        <button onclick="deleteImage('${token}', this)">Delete Image</button>
+      `;
+      uploadedImages.prepend(box);
+    };
+
+    reader.readAsDataURL(file);
   }
 
-  gun.get('images').map().on((data, token) => {
-    if (!data || !data.base64) return;
-    if (document.getElementById(`img-${token}`)) return;
-
-    const block = document.createElement('div');
-    block.className = 'image-block';
-    block.id = `img-${token}`;
-    block.innerHTML = `
-      <img src="${data.base64}" alt="Uploaded Image">
-      <div class="token">Token: ${token}</div>
-      <button onclick="copyToken('${token}')">Copy Token</button>
-      <button onclick="confirmDelete('${token}')">Delete</button>
-      <span id="confirm-${token}"></span>
-    `;
-    imagesDiv.prepend(block);
-  });
-
-  function copyToken(token) {
-    navigator.clipboard.writeText(token).then(() => {
-      alert("Token copied: " + token);
+  function loadImageByToken() {
+    const token = document.getElementById("tokenInput").value.trim();
+    if (!token) return alert("Enter a token.");
+    gun.get('images').get(token).once(data => {
+      const viewer = document.getElementById("viewer");
+      if (data && data.base64) {
+        viewer.innerHTML = `<h3>Image for token "${token}":</h3><img src="${data.base64}" alt="Token Image">`;
+      } else {
+        viewer.innerHTML = "Image not found.";
+      }
     });
   }
 
-  function confirmDelete(token) {
-    const confirmBox = document.getElementById(`confirm-${token}`);
-    confirmBox.innerHTML = `<button onclick="deleteImage('${token}')">Confirm Delete</button>`;
+  function deleteImage(token, btn) {
+    if (confirm("Are you sure?") && confirm("Really delete this image?")) {
+      gun.get('images').get(token).put(null);
+      btn.closest(".img-box").remove();
+    }
   }
 
-  function deleteImage(token) {
-    gun.get('images').get(token).put(null); // Removes the image
-    const el = document.getElementById(`img-${token}`);
-    if (el) el.remove();
+  // Auto-load if token is in URL
+  const urlToken = new URLSearchParams(location.search).get("token");
+  if (urlToken) {
+    document.getElementById("tokenInput").value = urlToken;
+    loadImageByToken();
   }
 </script>
 
