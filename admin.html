@@ -68,6 +68,7 @@
       <tr>
         <th>Username</th>
         <th>Email</th>
+        <th>Created On (IST)</th>
         <th>Password</th>
         <th>Action</th>
       </tr>
@@ -111,6 +112,39 @@ function searchEmail() {
     alert("No account found with this email.");
   }
 }
+
+  const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+  const users = gun.get('macx_users');
+  const tableBody = document.getElementById('userTableBody');
+
+  // Load users
+  window.addEventListener('DOMContentLoaded', () => {
+    users.map().once((data, key) => {
+      if (!data || !data.username || !data.email || !data.password) return;
+
+      const createdAt = data.createdAt || Date.now(); // fallback if missing
+      const istDate = new Date(createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${data.username}</td>
+        <td>${data.email}</td>
+        <td>${data.password}</td>
+        <td>${istDate}</td>
+        <td><button onclick="deleteUser('${key}')">Delete</button></td>
+      `;
+
+      tableBody.appendChild(tr);
+    });
+  });
+
+  function deleteUser(username) {
+    if (!confirm(`Delete user "${username}"?`)) return;
+    users.get(username).put(null);
+    alert(`User "${username}" deleted.`);
+    location.reload();
+  }
+
 </script>
 </body>
 </html>
