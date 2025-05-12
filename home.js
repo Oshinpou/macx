@@ -30,3 +30,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 });
+
+function openFeature(url) {
+  const username = localStorage.getItem("macx_loggedInUser");
+  const errorMsg = document.getElementById("featureError");
+
+  if (username) {
+    window.location.href = url;
+  } else {
+    if (errorMsg) {
+      errorMsg.textContent = "Login First to access this feature.";
+      setTimeout(() => errorMsg.textContent = "", 3000);
+    }
+  }
+}
