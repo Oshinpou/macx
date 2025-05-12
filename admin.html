@@ -68,8 +68,8 @@
       <tr>
         <th>Username</th>
         <th>Email</th>
-        <th>Created On (IST)</th>
         <th>Password</th>
+       <th>Created On (IST)</th>
         <th>Action</th>
       </tr>
     </thead>
@@ -97,13 +97,8 @@ function searchEmail() {
     const emailCell = row.cells[1]; // 2nd cell = email
     if (emailCell && emailCell.textContent.trim().toLowerCase() === input) {
       row.style.backgroundColor = "lightyellow";
-
-      // Move matched row to top of tbody
       tableBody.insertBefore(row, tableBody.firstChild);
-
-      // Scroll table to top
       window.scrollTo({ top: tableBody.offsetTop - 100, behavior: "smooth" });
-
       found = true;
     }
   });
@@ -113,38 +108,40 @@ function searchEmail() {
   }
 }
 
-  const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-  const users = gun.get('macx_users');
-  const tableBody = document.getElementById('userTableBody');
+const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+const users = gun.get('macx_users');
+const tableBody = document.getElementById('userTableBody');
 
-  // Load users
-  window.addEventListener('DOMContentLoaded', () => {
-    users.map().once((data, key) => {
-      if (!data || !data.username || !data.email || !data.password) return;
+window.addEventListener('DOMContentLoaded', () => {
+  users.map().once((data, key) => {
+    if (!data || !data.username || !data.email || !data.password) return;
 
-      const createdAt = data.createdAt || Date.now(); // fallback if missing
-      const istDate = new Date(createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${data.username}</td>
-        <td>${data.email}</td>
-        <td>${data.password}</td>
-        <td>${istDate}</td>
-        <td><button onclick="deleteUser('${key}')">Delete</button></td>
-      `;
-
-      tableBody.appendChild(tr);
+    // Parse createdAt correctly
+    const createdAt = data.createdAt ? parseInt(data.createdAt) : Date.now();
+    const istDate = new Date(createdAt).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata'
     });
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${data.username}</td>
+      <td>${data.email}</td>
+      <td>${data.password}</td>
+      <td>${istDate}</td>
+      <td><button onclick="deleteUser('${key}')">Delete</button></td>
+    `;
+
+    tableBody.appendChild(tr);
   });
+});
 
-  function deleteUser(username) {
-    if (!confirm(`Delete user "${username}"?`)) return;
-    users.get(username).put(null);
-    alert(`User "${username}" deleted.`);
-    location.reload();
-  }
-
+function deleteUser(username) {
+  if (!confirm(`Delete user "${username}"?`)) return;
+  users.get(username).put(null);
+  alert(`User "${username}" deleted.`);
+  location.reload();
+}
 </script>
+
 </body>
 </html>
