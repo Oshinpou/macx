@@ -1,45 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Background Image Page</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token Image Uploader (No Node.js)</title>
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body, html {
-      height: 100%;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      background-image: url('https://macxz.netlify.app/images?token=kkmQmREx');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
-    }
-
-    .content {
-      text-align: center;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 40px;
-      border-radius: 12px;
-    }
+    body { font-family: Arial; padding: 20px; }
+    .img-box { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
+    img { max-width: 100%; height: auto; margin-top: 5px; }
+    input[type="file"] { margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <div class="content">
-    <h1>Welcome to Imacx</h1>
-    <p>This is a sample page with a background image.</p>
-  </div>
-</body>
+  <h2>Upload Image with Token</h2>
+  <input type="file" id="imageInput" accept="image/*">
+  <button onclick="uploadImage()">Upload Image</button>
+  <div id="uploadedImages"></div>  <script>
+    const gun = Gun({
+      peers: ['https://gun-manhattan.herokuapp.com/gun'] // Public Gun relay peer
+    });
+    const uploadedImages = document.getElementById('uploadedImages');
+
+    function uploadImage() {
+      const fileInput = document.getElementById("imageInput");
+      const file = fileInput.files[0];
+      if (!file) return alert("Please select an image to upload.");
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result;
+        const token = nanoid.nanoid(8);
+
+        gun.get("images").get(token).put({ base64 }, ack => {
+          if (ack.err) {
+            alert("Error uploading image: " + ack.err);
+          } else {
+            renderImage(token, base64);
+          }
+        });
+      };
+      reader.onerror = () => {
+        alert("Error reading image file.");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderImage(token, base64) {
+      const link = `${location.origin + location.pathname}?token=${token}`;
+      const box = document.createElement("div");
+      box.className = "img-box";
+      box.innerHTML = `
+        <strong>Token:</strong> ${token}<br>
+        <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
+        <img src="${base64}" alt="Uploaded"><br>
+        <button onclick="deleteImage('${token}', this)">Delete Image</button>
+      `;
+      uploadedImages.prepend(box);
+    }
+
+    function deleteImage(token, button) {
+      if (!confirm("Delete this image?")) return;
+      if (!confirm("Are you absolutely sure?")) return;
+
+      gun.get("images").get(token).put(null);
+      button.parentElement.remove();
+    }
+
+    const urlToken = new URLSearchParams(location.search).get("token");
+    if (urlToken) {
+      gun.get("images").get(urlToken).once(data => {
+        if (data && data.base64) renderImage(urlToken, data.base64);
+        else alert("Image not found or expired.");
+      });
+    }
+
+    gun.get("images").map().once((data, key) => {
+      if (data && data.base64) renderImage(key, data.base64);
+    });
+  </script></body>
 </html>
