@@ -1,27 +1,54 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Image Uploader & Token Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Image Uploader with Token</title>
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    img { max-width: 100%; margin-top: 10px; }
-    .img-box { margin: 20px 0; border: 1px solid #ddd; padding: 10px; }
-    input[type="file"] { margin-bottom: 10px; }
-    textarea { width: 100%; height: 50px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+    .img-box {
+      margin: 20px 0;
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+    textarea {
+      width: 100%;
+      height: 50px;
+    }
+    button {
+      padding: 8px 12px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body>
 
-<h1>Image Upload + Token Viewer</h1>
+<h1>Image Upload & Global Token Viewer</h1>
 
 <div id="upload-section">
   <input type="file" id="fileInput" accept="image/*">
   <button onclick="uploadImage()">Upload & Generate Token</button>
 </div>
 
+<h2>Uploaded Images (Global View)</h2>
 <div id="uploadedImages"></div>
 
 <hr>
@@ -33,21 +60,43 @@
 <div id="viewer"></div>
 
 <script>
+  // Initialize GUN.js
   const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
   const fileInput = document.getElementById("fileInput");
   const uploadedImages = document.getElementById("uploadedImages");
 
+  // Display all existing images globally across all devices
+  gun.get('images').map().once((data, key) => {
+    if (data && data.base64) {
+      const link = `${location.origin + location.pathname}?token=${key}`;
+      const box = document.createElement("div");
+      box.className = "img-box";
+      box.innerHTML = `
+        <strong>Token:</strong> ${key}<br>
+        <strong>URL:</strong> <a href="${link}" target="_blank">${link}</a><br>
+        <img src="${data.base64}" alt="Uploaded"><br>
+        <button onclick="deleteImage('${key}', this)">Delete Image</button>
+      `;
+      uploadedImages.prepend(box);
+    }
+  });
+
+  // Function to upload an image
   function uploadImage() {
     const file = fileInput.files[0];
     if (!file) return alert("Please select an image.");
+    
     const reader = new FileReader();
 
     reader.onload = () => {
       const base64 = reader.result;
-      const token = nanoid.nanoid(8);
-      gun.get('images').get(token).put({ base64 });
+      const token = nanoid.nanoid(8); // Generate a unique token for the image
+      gun.get('images').get(token).put({ base64 }); // Store the image globally
 
+      // Generate the URL with the token
       const link = `${location.origin + location.pathname}?token=${token}`;
+      
+      // Display the uploaded image globally across all devices
       const box = document.createElement("div");
       box.className = "img-box";
       box.innerHTML = `
@@ -62,9 +111,11 @@
     reader.readAsDataURL(file);
   }
 
+  // Function to load image by token
   function loadImageByToken() {
     const token = document.getElementById("tokenInput").value.trim();
-    if (!token) return alert("Enter a token.");
+    if (!token) return alert("Please enter a token.");
+
     gun.get('images').get(token).once(data => {
       const viewer = document.getElementById("viewer");
       if (data && data.base64) {
@@ -75,14 +126,15 @@
     });
   }
 
+  // Function to delete an image
   function deleteImage(token, btn) {
-    if (confirm("Are you sure?") && confirm("Really delete this image?")) {
-      gun.get('images').get(token).put(null);
-      btn.closest(".img-box").remove();
+    if (confirm("Are you sure you want to delete this image?") && confirm("This action cannot be undone. Proceed?")) {
+      gun.get('images').get(token).put(null); // Delete from GUN
+      btn.closest(".img-box").remove(); // Remove the image box from the UI
     }
   }
 
-  // Auto-load if token is in URL
+  // Auto-load image if token is in URL
   const urlToken = new URLSearchParams(location.search).get("token");
   if (urlToken) {
     document.getElementById("tokenInput").value = urlToken;
