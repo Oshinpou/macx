@@ -86,7 +86,7 @@
 
      function displayImages() {
   document.getElementById('imagesContainer').innerHTML = '';
-  db.allDocs({ include_docs: true, attachments: true }).then(result => {
+  remoteDB.allDocs({ include_docs: true, attachments: true }).then(result => {
     result.rows.forEach(row => {
       const doc = row.doc;
       for (let name in doc._attachments) {
@@ -101,7 +101,7 @@
         document.getElementById('imagesContainer').appendChild(div);
       }
     });
-  });
+  }).catch(console.error);
 }
 
     function deleteImage(id, rev) {
