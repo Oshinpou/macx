@@ -84,8 +84,7 @@
       reader.readAsDataURL(file);
     }
 
-     
-function displayImages() {
+     function displayImages() {
   document.getElementById('imagesContainer').innerHTML = '';
   db.allDocs({ include_docs: true, attachments: true }).then(result => {
     result.rows.forEach(row => {
@@ -96,7 +95,7 @@ function displayImages() {
         div.className = 'image-box';
         div.innerHTML = `
           <img src="${imgUrl}" alt="${name}" />
-          <div class="image-url">${imgUrl}</div>
+          <div class="image-url"><a href="${imgUrl}" target="_blank">${imgUrl}</a></div>
           <button onclick="deleteImage('${doc._id}', '${doc._rev}')">Delete</button>
         `;
         document.getElementById('imagesContainer').appendChild(div);
