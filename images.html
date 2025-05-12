@@ -51,25 +51,29 @@
     const reader = new FileReader();
 
     reader.onload = () => {
-      try {
-        const base64 = reader.result;
-        const token = nanoid.nanoid(8);
-        console.log("Uploading image with token:", token);
+try {
+  const base64 = reader.result;
+  if (!base64.startsWith("data:image/")) {
+    throw new Error("Invalid base64 image data");
+  }
 
-        gun.get('images').get(token).put({ base64 }, ack => {
-          if (ack.err) {
-            console.error("Upload failed:", ack.err);
-            errorLog.textContent = "Error: Failed to store image in GUN network.";
-          } else {
-            console.log("Upload success:", token);
-            showImage(token, base64);
-          }
-        });
-      } catch (err) {
-        console.error("Upload error:", err);
-        errorLog.textContent = "Error: Unexpected issue while uploading image.";
-      }
-    };
+  const token = nanoid.nanoid(8);
+  console.log("Uploading image with token:", token);
+
+  gun.get('images').get(token).put({ base64 }, ack => {
+    if (ack.err) {
+      console.error("Upload failed (ack):", ack.err);
+      errorLog.textContent = "Error: Failed to store image in GUN network. Details: " + ack.err;
+    } else {
+      console.log("Upload success:", token);
+      showImage(token, base64);
+    }
+  });
+} catch (err) {
+  console.error("Upload error (catch):", err);
+  errorLog.textContent = "Error: " + err.message;
+}
+      
 
     reader.onerror = (e) => {
       console.error("FileReader error:", e);
