@@ -1,75 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MACX - Account</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MACX Account Details</title>
   <link rel="stylesheet" href="style.css">
-  <style>
-    body {
-      background-image: url('your-background.jpg'); /* Replace with your actual image path */
-      background-size: cover;
-      background-position: center;
-      font-family: Arial, sans-serif;
-      color: white;
-      padding: 20px;
-    }
-    .account-box {
-      background: rgba(0, 0, 0, 0.7);
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 500px;
-      margin: auto;
-    }
-    h2, p {
-      margin: 10px 0;
-    }
-    button {
-      margin: 10px 5px 0 0;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      background-color: #ffffff30;
-      color: white;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover {
-      background-color: #ffffff60;
-    }
-    .status {
-      margin-top: 15px;
-      font-weight: bold;
-    }
-  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
 </head>
 <body>
-  <div class="account-box">
-    <h2>MACX Account Details</h2>
-    <div id="accountInfo">
-      <!-- Content filled by JS -->
-    </div>
-    <div class="status" id="loginStatus"></div>
+  <div class="container">
+    <h1>Account Details</h1>
+    <p id="loginStatus">Login Status: Checking...</p>
+    <div id="accountInfo"></div>
   </div>
 
   <script>
-    // Simulate fetching logged in user from localStorage (set in home.js)
     const username = localStorage.getItem("macx_loggedInUser");
-    const email = localStorage.getItem("macx_loggedInEmail");
-    const password = localStorage.getItem("macx_loggedInPassword");
-
+    const gun = Gun();
     const infoBox = document.getElementById("accountInfo");
     const loginStatus = document.getElementById("loginStatus");
 
-    if (username && email && password) {
-      infoBox.innerHTML = `
-        <p><strong>Username:</strong> ${username}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Password:</strong> ${password}</p>
-        <button onclick="location.href='index.html'">Recover Deleted Account</button>
-        <button onclick="location.href='supportout.html'">Support</button>
-      `;
-      loginStatus.textContent = "Login Status: Logged In";
+    if (username) {
+      gun.get('users').get(username).once(data => {
+        if (data) {
+          const email = data.email || "Not available";
+          const password = data.password || "Not available";
+
+          infoBox.innerHTML = `
+            <p><strong>Username:</strong> ${username}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Password:</strong> ${password}</p>
+            <button onclick="location.href='index.html'">Recover Deleted Account</button>
+            <button onclick="location.href='supportout.html'">Support</button>
+          `;
+          loginStatus.textContent = "Login Status: Logged In";
+        } else {
+          infoBox.innerHTML = "<p>Error fetching account data.</p>";
+          loginStatus.textContent = "Login Status: Logged In";
+        }
+      });
     } else {
       infoBox.innerHTML = `
         <p>You are not logged in.</p>
