@@ -1,92 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Global Image Upload with Token</title>
-  <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
+  <title>Global Image Uploader with Token (GUN.js)</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f8f8f8; }
-    .img-box { background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; }
-    .img-box img { max-width: 100%; margin-top: 10px; }
-    button { padding: 6px 12px; margin-top: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
-    button:hover { background: #0056b3; }
-    #errorLog { color: red; margin-top: 10px; }
+    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
+    input[type="file"] { margin: 10px 0; }
+    .img-box {
+      border: 1px solid #ccc;
+      background: white;
+      margin-bottom: 15px;
+      padding: 10px;
+    }
+    .img-box img {
+      max-width: 100%;
+      height: auto;
+    }
+    .error { color: red; }
   </style>
 </head>
 <body>
 
-<h2>Upload Image & Generate Token</h2>
-<input type="file" id="fileInput" accept="image/*">
-<button id="uploadBtn">Upload & Generate Token</button>
-<div id="errorLog"></div>
+<h2>Upload Image Globally via Token (P2P GUN)</h2>
 
-<h3>Uploaded Images (Global Sync)</h3>
+<input type="file" id="imageInput" accept="image/*">
+<button onclick="uploadImage()">Upload Image</button>
+<p class="error" id="errorLog"></p>
+
 <div id="uploadedImages"></div>
 
-<h3>View Image by Token</h3>
-<input type="text" id="tokenInput" placeholder="Enter Token">
-<button onclick="loadImageByToken()">View Image</button>
-<div id="viewer"></div>
+<!-- GUN.js + nanoid CDN -->
+<script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nanoid/nanoid.js"></script>
 
 <script>
-  const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
-  const fileInput = document.getElementById("fileInput");
-  const uploadedImages = document.getElementById("uploadedImages");
-  const errorLog = document.getElementById("errorLog");
+  const gun = Gun('https://gun-manhattan.herokuapp.com/gun');
+  const uploadedImages = document.getElementById('uploadedImages');
+  const errorLog = document.getElementById('errorLog');
 
-  document.getElementById("uploadBtn").onclick = () => {
-    errorLog.textContent = ""; // clear previous errors
-    const file = fileInput.files[0];
-    if (!file) {
-      errorLog.textContent = "Error: No image selected.";
-      return;
+  // Display all previously uploaded images
+  gun.get('images').map().once((data, key) => {
+    if (data && data.base64) {
+      showImage(key, data.base64);
     }
+  });
 
-    if (!file.type.startsWith("image/")) {
-      errorLog.textContent = "Error: Selected file is not an image.";
+  function uploadImage() {
+    const fileInput = document.getElementById('imageInput');
+    const file = fileInput.files[0];
+    errorLog.textContent = "";
+
+    if (!file) {
+      errorLog.textContent = "Please select an image.";
       return;
     }
 
     const reader = new FileReader();
+    reader.onload = function () {
+      try {
+        const base64 = reader.result;
 
-    reader.onload = () => {
-try {
-  const base64 = reader.result;
-  if (!base64.startsWith("data:image/")) {
-    throw new Error("Invalid base64 image data");
-  }
+        if (!base64.startsWith("data:image/")) {
+          throw new Error("Invalid image format.");
+        }
 
-  const token = nanoid.nanoid(8);
-  console.log("Uploading image with token:", token);
+        const token = nanoid.nanoid(8);
+        console.log("Uploading image with token:", token);
 
-  gun.get('images').get(token).put({ base64 }, ack => {
-    if (ack.err) {
-      console.error("Upload failed (ack):", ack.err);
-      errorLog.textContent = "Error: Failed to store image in GUN network. Details: " + ack.err;
-    } else {
-      console.log("Upload success:", token);
-      showImage(token, base64);
-    }
-  });
-} catch (err) {
-  console.error("Upload error (catch):", err);
-  errorLog.textContent = "Error: " + err.message;
-}
-      
+        gun.get('images').get(token).put({ base64 }, ack => {
+          if (ack.err) {
+            console.error("Upload failed:", ack.err);
+            errorLog.textContent = "Error: Failed to upload image. " + ack.err;
+          } else {
+            console.log("Upload success:", token);
+            showImage(token, base64);
+          }
+        });
 
-    reader.onerror = (e) => {
-      console.error("FileReader error:", e);
-      errorLog.textContent = "Error: Failed to read the image file.";
+      } catch (err) {
+        console.error("Upload error:", err);
+        errorLog.textContent = "Error: " + err.message;
+      }
     };
-
+    reader.onerror = () => {
+      console.error("Reader failed:", reader.error);
+      errorLog.textContent = "Error: Could not read image file.";
+    };
     reader.readAsDataURL(file);
-  };
+  }
 
   function showImage(token, base64) {
     const link = `${location.origin + location.pathname}?token=${token}`;
     const box = document.createElement("div");
-    box.id = `img-${token}`;
     box.className = "img-box";
     box.innerHTML = `
       <strong>Token:</strong> ${token}<br>
@@ -97,40 +102,30 @@ try {
     uploadedImages.prepend(box);
   }
 
-  // Sync existing images globally
-  gun.get('images').map().once((data, key) => {
-    if (data && data.base64 && !document.getElementById(`img-${key}`)) {
-      showImage(key, data.base64);
+  function deleteImage(token, btn) {
+    if (confirm("Are you sure you want to delete this image?") && confirm("Please confirm again to delete.")) {
+      gun.get('images').get(token).put(null, ack => {
+        if (ack.err) {
+          alert("Failed to delete image: " + ack.err);
+        } else {
+          btn.parentElement.remove();
+          alert("Image deleted.");
+        }
+      });
     }
-  });
+  }
 
-  function loadImageByToken() {
-    const token = document.getElementById("tokenInput").value.trim();
-    if (!token) return alert("Enter a valid token.");
-    gun.get('images').get(token).once(data => {
-      const viewer = document.getElementById("viewer");
+  // Load image by token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const tokenParam = urlParams.get('token');
+  if (tokenParam) {
+    gun.get('images').get(tokenParam).once(data => {
       if (data && data.base64) {
-        viewer.innerHTML = `<img src="${data.base64}" alt="Image for ${token}">`;
+        showImage(tokenParam, data.base64);
       } else {
-        viewer.innerHTML = "Image not found for token.";
+        errorLog.textContent = "No image found for token: " + tokenParam;
       }
     });
-  }
-
-  function deleteImage(token, btn) {
-    if (confirm("Are you sure you want to delete this image?") &&
-        confirm("This action cannot be undone. Confirm delete?")) {
-      gun.get('images').get(token).put(null);
-      const box = document.getElementById(`img-${token}`);
-      if (box) box.remove();
-    }
-  }
-
-  // Auto-load if URL token is present
-  const urlToken = new URLSearchParams(location.search).get("token");
-  if (urlToken) {
-    document.getElementById("tokenInput").value = urlToken;
-    loadImageByToken();
   }
 </script>
 
